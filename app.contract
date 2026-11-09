@@ -300,7 +300,9 @@ component App
                         text "Liked Songs"
                     if libraryFilter == "liked"
                       if likedTracks.length == 0
-                        EmptyState(symbol="symbol:heart", title="No Liked Songs", message="Tap the heart on a song to save it here.")
+                        // A border written on a row replaces the separator the platform draws under it.
+                        row border-bottom="none" testId="liked-empty"
+                          EmptyState(symbol="symbol:heart", title="No Liked Songs", message="Tap the heart on a song to save it here.")
                       else
                         for s, i in likedTracks key=s.id
                           TrackRow(track=s, rowId=`liked-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=true, still=still, play=playFrom(likedTracks, i), like=toggleLike(s.id), menu=aim(s))
