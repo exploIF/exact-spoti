@@ -170,6 +170,8 @@ component App
   action hostTime(seconds: number)
     if floor(seconds) != position
       position = floor(seconds)
+      buffering = false
+      buffering = false
   action hostDuration(seconds: number)
     duration = seconds
   action retry
@@ -227,102 +229,104 @@ component App
           nexttrack=next previoustrack=previous
           ended=next play=hostPlaying playing=hostPlaying pause=hostPaused waiting=hostWaiting canplay=hostCanPlay error=hostFailed
           timeupdate=hostTime durationchange=hostDuration
-      column flex=1 min-height=0 position="relative"
-        for t in nav.tabs key=t.name
-          column role="tabpanel" id=`panel-${t.name}` position="absolute" inset=0
-            for e in t.stack key=e.id
-              if e.name == "home"
-                column navigationKey=`${e.id}` navigationScroll="home-scroll" position="absolute" inset=0
-                  header display="flex" align-items="center"
-                    text "Good Listening" role="heading" aria-level=1 flex=1
-                  scroll id="home-scroll" flex=1 min-height=0
-                    column gap=24 padding="8px 0 24px"
-                      row flex-wrap="wrap" gap=8 padding="0 16px"
-                        for c in quickPicks key=c.id
-                          QuickTile(item=c, href=path("collection", c.id), tileId=`quick-${c.id}`)
-                      if recentTracks.length > 0
-                        column gap=4
-                          text "Recently Played" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px 4px"
-                          for s, i in recentTracks.slice(0, 5) key=s.id
-                            TrackRow(track=s, rowId=`recent-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(recentTracks, i), like=toggleLike(s.id), menu=aim(s))
-                      column gap=8
-                        text "Made For You" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px"
-                        list id="shelf-playlists" virtualized=true display="flex" flex-direction="row" height=206 estimated-item-width=160 padding-left=16 padding-right=4
-                          for c in playlists key=c.id
-                            ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
-                      column gap=8
-                        text "New Albums" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px"
-                        list id="shelf-albums" virtualized=true display="flex" flex-direction="row" height=206 estimated-item-width=160 padding-left=16 padding-right=4
-                          for c in albums key=c.id
-                            ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
-              if e.name == "collection"
-                column navigationKey=`${e.id}` navigationScroll=`tracks-${e.id}` position="absolute" inset=0 background-color="surface.page"
-                  header display="flex" align-items="center"
-                    text titleOf(collections, e.params.id) role="heading" aria-level=2 flex=1
-                  list id=`tracks-${e.id}` virtualized=true estimated-item-height=60 flex=1 min-height=0 testId=`tracks-${t.name}`
-                    for s, i in (t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks) key=s.id
-                      TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom((t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks), i), like=toggleLike(s.id), menu=aim(s))
-              if e.name == "search"
-                column navigationKey=`${e.id}` navigationScroll="search-scroll" position="absolute" inset=0
-                  header display="flex" flex-wrap="wrap" align-items="center" gap=8
-                    text "Search" role="heading" aria-level=1 flex=1
-                    input type="search" value=query input=setQuery placeholder="Songs or artists" aria-label="Search songs and artists" testId="search-input" width="100%"
-                  if query.trim() == ""
-                    scroll id="search-scroll" flex=1 min-height=0
-                      row flex-wrap="wrap" gap=10 padding=16
-                        for g, i in genres key=g
-                          button press=browseGenre(g) testId=`genre-${i}` flex="1 1 150px" min-height=72 appearance="none" border-radius=8 background-color="surface.card" padding=14 display="flex" align-items="flex-start"
-                            text g font-weight=700 color="text.primary"
-                  else if results.length == 0 and not pending(results)
-                    EmptyState(symbol="symbol:search", title="No Results", message="Check the spelling or try another word.")
-                  else
-                    list id="search-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="search-results"
-                      for s, i in results key=s.id
-                        TrackRow(track=s, rowId=`result-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(results, i), like=toggleLike(s.id), menu=aim(s))
-              if e.name == "library"
-                column navigationKey=`${e.id}` navigationScroll="library-scroll" position="absolute" inset=0
-                  header display="flex" flex-wrap="wrap" align-items="center" gap=8
-                    text "Your Library" role="heading" aria-level=1 flex=1
-                  row role="radiogroup" aria-label="Library contents" padding="0 16px 8px" gap=8
-                    button role="radio" aria-checked=(libraryFilter == "playlists") press=setLibraryFilter("playlists") testId="filter-playlists"
-                      text "Playlists"
-                    button role="radio" aria-checked=(libraryFilter == "liked") press=setLibraryFilter("liked") testId="filter-liked"
-                      text "Liked Songs"
-                  if libraryFilter == "liked"
-                    if likedTracks.length == 0
-                      EmptyState(symbol="symbol:heart", title="No Liked Songs", message="Tap the heart on a song to save it here.")
+      // Content and player bar share a column, so a wide layout keeps the bar under the content.
+      column flex=1 min-width=0 min-height=0 display="flex" flex-direction="column"
+        column flex=1 min-height=0 position="relative"
+          for t in nav.tabs key=t.name
+            column role="tabpanel" id=`panel-${t.name}` position="absolute" inset=0
+              for e in t.stack key=e.id
+                if e.name == "home"
+                  column navigationKey=`${e.id}` navigationScroll="home-scroll" position="absolute" inset=0
+                    header display="flex" align-items="center"
+                      text "Good Listening" role="heading" aria-level=1 flex=1
+                    scroll id="home-scroll" flex=1 min-height=0
+                      column gap=24 padding="8px 0 24px"
+                        row flex-wrap="wrap" gap=8 padding="0 16px"
+                          for c in quickPicks key=c.id
+                            QuickTile(item=c, href=path("collection", c.id), tileId=`quick-${c.id}`)
+                        if recentTracks.length > 0
+                          column gap=4
+                            text "Recently Played" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px 4px"
+                            for s, i in recentTracks.slice(0, 5) key=s.id
+                              TrackRow(track=s, rowId=`recent-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(recentTracks, i), like=toggleLike(s.id), menu=aim(s))
+                        column gap=8
+                          text "Made For You" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px"
+                          list id="shelf-playlists" virtualized=true display="flex" flex-direction="row" height=206 estimated-item-width=160 padding-left=16 padding-right=4
+                            for c in playlists key=c.id
+                              ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
+                        column gap=8
+                          text "New Albums" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px"
+                          list id="shelf-albums" virtualized=true display="flex" flex-direction="row" height=206 estimated-item-width=160 padding-left=16 padding-right=4
+                            for c in albums key=c.id
+                              ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
+                if e.name == "collection"
+                  column navigationKey=`${e.id}` navigationScroll=`tracks-${e.id}` position="absolute" inset=0 background-color="surface.page"
+                    header display="flex" align-items="center"
+                      text titleOf(collections, e.params.id) role="heading" aria-level=2 flex=1
+                    list id=`tracks-${e.id}` virtualized=true estimated-item-height=60 flex=1 min-height=0 testId=`tracks-${t.name}`
+                      for s, i in (t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks) key=s.id
+                        TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom((t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks), i), like=toggleLike(s.id), menu=aim(s))
+                if e.name == "search"
+                  column navigationKey=`${e.id}` navigationScroll="search-scroll" position="absolute" inset=0
+                    header display="flex" flex-wrap="wrap" align-items="center" gap=8
+                      text "Search" role="heading" aria-level=1 flex=1
+                      input type="search" value=query input=setQuery placeholder="Songs or artists" aria-label="Search songs and artists" testId="search-input" width="100%"
+                    if query.trim() == ""
+                      scroll id="search-scroll" flex=1 min-height=0
+                        row flex-wrap="wrap" gap=10 padding=16
+                          for g, i in genres key=g
+                            button press=browseGenre(g) testId=`genre-${i}` flex="1 1 150px" min-height=72 appearance="none" border-radius=8 background-color="surface.card" padding=14 display="flex" align-items="flex-start"
+                              text g font-weight=700 color="text.primary"
+                    else if results.length == 0 and not pending(results)
+                      EmptyState(symbol="symbol:search", title="No Results", message="Check the spelling or try another word.")
                     else
-                      list id="library-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="liked-list"
-                        for s, i in likedTracks key=s.id
-                          TrackRow(track=s, rowId=`liked-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=true, still=still, play=playFrom(likedTracks, i), like=toggleLike(s.id), menu=aim(s))
-                  else
-                    list id="library-scroll" virtualized=true estimated-item-height=68 flex=1 min-height=0 testId="playlist-list"
-                      for c in playlists key=c.id
-                        link href=path("collection", c.id) testId=`library-${c.id}` display="flex" flex-direction="row" align-items="center" gap=12 padding="6px 16px" text-decoration="none" color="text.primary"
-                          image c.cover width=52 height=52 border-radius=6 object-fit="cover" alt=""
-                          column flex=1 min-width=0 gap=2
-                            text c.title font-weight=600
-                            text `${c.trackCount} ${c.trackCount == 1 ? "song" : "songs"}` font="-exact-footnote" color="text.muted"
-              if e.name == "player"
-                NowPlaying(entryKey=`${e.id}`, track=current, isPlaying=isPlaying, isBuffering=buffering, isLiked=liked.includes(current.id), shuffle=shuffle, repeat=repeat, position=shownPosition, duration=shownDuration, failed=failed, close=back, toggle=toggle, next=next, previous=previous, like=toggleLike(current.id), toggleShuffle=toggleShuffle, cycleRepeat=cycleRepeat, openQueue=openQueue, retry=retry, scrubbing=scrubbing, seek=seek)
-              if e.name == "queue"
-                column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="queue-list" position="absolute" inset=0 background-color="surface.page"
-                  header display="flex" align-items="center" justify-content="space-between"
-                    button id="back" press=back aria-label="Close queue" testId="queue-close"
-                      image "symbol:close"
-                    text "Up Next" role="heading"
-                  if upNext.length == 0
-                    EmptyState(symbol="symbol:list", title="Queue Is Empty", message="Play a playlist to fill it.")
-                  else
-                    list id="queue-list" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="queue-list"
-                      for s, i in upNext key=s.id
-                        row press=playQueued(i) delete=removeQueued(i) testId=`queue-${i}` gap=12 align-items="center" padding="6px 16px"
-                          image s.cover width=44 height=44 border-radius=6 object-fit="cover" alt=""
-                          column flex=1 min-width=0 gap=2
-                            text s.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
-                            text s.artist font="-exact-footnote" color="text.muted"
-      if hasTrack
-        MiniPlayer(track=current, isPlaying=isPlaying, fraction=fraction, open=openPlayer, toggle=toggle, next=next)
+                      list id="search-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="search-results"
+                        for s, i in results key=s.id
+                          TrackRow(track=s, rowId=`result-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(results, i), like=toggleLike(s.id), menu=aim(s))
+                if e.name == "library"
+                  column navigationKey=`${e.id}` navigationScroll="library-scroll" position="absolute" inset=0
+                    header display="flex" flex-wrap="wrap" align-items="center" gap=8
+                      text "Your Library" role="heading" aria-level=1 flex=1
+                    row role="radiogroup" aria-label="Library contents" padding="0 16px 8px" gap=8
+                      button role="radio" aria-checked=(libraryFilter == "playlists") press=setLibraryFilter("playlists") testId="filter-playlists"
+                        text "Playlists"
+                      button role="radio" aria-checked=(libraryFilter == "liked") press=setLibraryFilter("liked") testId="filter-liked"
+                        text "Liked Songs"
+                    if libraryFilter == "liked"
+                      if likedTracks.length == 0
+                        EmptyState(symbol="symbol:heart", title="No Liked Songs", message="Tap the heart on a song to save it here.")
+                      else
+                        list id="library-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="liked-list"
+                          for s, i in likedTracks key=s.id
+                            TrackRow(track=s, rowId=`liked-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=true, still=still, play=playFrom(likedTracks, i), like=toggleLike(s.id), menu=aim(s))
+                    else
+                      list id="library-scroll" virtualized=true estimated-item-height=68 flex=1 min-height=0 testId="playlist-list"
+                        for c in playlists key=c.id
+                          link href=path("collection", c.id) testId=`library-${c.id}` display="flex" flex-direction="row" align-items="center" gap=12 padding="6px 16px" text-decoration="none" color="text.primary"
+                            image c.cover width=52 height=52 border-radius=6 object-fit="cover" alt=""
+                            column flex=1 min-width=0 gap=2
+                              text c.title font-weight=600
+                              text `${c.trackCount} ${c.trackCount == 1 ? "song" : "songs"}` font="-exact-footnote" color="text.muted"
+                if e.name == "player"
+                  NowPlaying(entryKey=`${e.id}`, track=current, isPlaying=isPlaying, isBuffering=buffering, isLiked=liked.includes(current.id), shuffle=shuffle, repeat=repeat, position=shownPosition, duration=shownDuration, failed=failed, close=back, toggle=toggle, next=next, previous=previous, like=toggleLike(current.id), toggleShuffle=toggleShuffle, cycleRepeat=cycleRepeat, openQueue=openQueue, retry=retry, scrubbing=scrubbing, seek=seek)
+                if e.name == "queue"
+                  column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="queue-list" position="absolute" inset=0 background-color="surface.page"
+                    header appearance="none" display="flex" align-items="center" justify-content="space-between" padding="12px 16px"
+                      button id="back" press=back aria-label="Close queue" testId="queue-close"
+                        image "symbol:close"
+                      text "Up Next" role="heading"
+                    if upNext.length == 0
+                      EmptyState(symbol="symbol:list", title="Queue Is Empty", message="Play a playlist to fill it.")
+                    else
+                      list id="queue-list" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="queue-list"
+                        for s, i in upNext key=s.id
+                          row press=playQueued(i) delete=removeQueued(i) testId=`queue-${i}` gap=12 align-items="center" padding="6px 16px"
+                            image s.cover width=44 height=44 border-radius=6 object-fit="cover" alt=""
+                            column flex=1 min-width=0 gap=2
+                              text s.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+                              text s.artist font="-exact-footnote" color="text.muted"
+        if hasTrack
+          MiniPlayer(track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
       column id="track-menu" popover="auto" role="menu"
         button press=addToQueue(menuTrack) popovertarget="track-menu" popovertargetaction="hide" testId="menu-queue"
           image "symbol:add"

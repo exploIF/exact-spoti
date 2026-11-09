@@ -5,8 +5,8 @@
   "id": "com.exploif.exactspoti",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#100e16",
-  "background_color": "#100e16",
+  "theme_color": "#000000",
+  "background_color": "#000000",
   "app": {
     "id": "com.exploif.exactspoti",
     "name": "ExactSpoti"

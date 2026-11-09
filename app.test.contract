@@ -59,3 +59,19 @@ test "search finds songs live"
   type "search-input" "zzzz"
   clock data
   expect tree missing "search-results"
+
+test "a wide window keeps the player bar under the content, with seek"
+  size 1280x800
+  clock data
+  tap "quick-genre-0"
+  clock settle
+  clock data
+  tap "home-t0"
+  clock settle
+  expect tree has "bar-seek"
+  tap "bar-previous"
+  expect state index == 0
+  type "app" key "k"
+  expect state paused == true
+  type "app" key "Shift+ArrowRight"
+  expect state index == 1

@@ -27,7 +27,7 @@ component NowPlaying
   view
     column navigationKey=entryKey navigationPresentation="modal" navigationScroll="player-scroll" position="absolute" inset=0
       background-color="surface.page" color="text.primary"
-      header display="flex" align-items="center" justify-content="space-between"
+      header appearance="none" display="flex" align-items="center" justify-content="space-between" padding="12px 16px"
         button id="back" press=close aria-label="Close player" testId="player-close"
           image "symbol:close"
         text "Now Playing" role="heading"

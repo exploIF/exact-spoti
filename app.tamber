@@ -1,7 +1,7 @@
 tamber brand
 
 theme
-  surface.page = #100e16  scheme=fixed
+  surface.page = #000000  scheme=fixed
   surface.card = #1d1a26  scheme=fixed
   surface.raised = #2b2736  scheme=fixed
   text.primary = #f6f3fb  scheme=fixed
