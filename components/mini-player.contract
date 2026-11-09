@@ -20,7 +20,7 @@ component MiniPlayer
   view
     column flex-shrink=0 background-color="surface.raised" testId=`${prefix}-mini-player`
       row gap=10 align-items="center" padding="8px 12px"
-        row press=open flex=1 min-width=0 gap=10 align-items="center" cursor="pointer" aria-label=`Now playing: ${track.title}` testId=`${prefix}-mini-open`
+        row press=open flex=1 min-width=0 gap=10 align-items="center" cursor="pointer" aria-label=`Now playing: ${track.title}` testId=`${prefix}-mini-open` min-height=44
           image track.cover width=42 height=42 border-radius=6 flex-shrink=0 object-fit="cover" alt=""
           column flex=1 min-width=0 gap=1
             text track.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=`${prefix}-mini-title`
