@@ -11,6 +11,15 @@ const sources: Sources = {
   loadCollectionTracks: ([id]) => tracksOfCollection(id),
   searchTracks: ([query]) => searchTracks(query),
   loadTracksByIds: ([ids]) => ids.flatMap((id) => trackById(id) ?? []),
+  // Tells the iOS tab bar accessory what is playing. `active` says the native bar is in use.
+  syncPlayerBar: ([hasTrack, title, artist, cover, isPlaying], _store, _storage, native) => {
+    if (!native?.available) return { active: false };
+    try {
+      return native.call({ op: 'update', hasTrack, title, artist, cover, isPlaying }) as { active: boolean };
+    } catch {
+      return { active: false };
+    }
+  },
   // The current song stays first, so shuffling never interrupts playback.
   shuffleQueue: ([queue, index, seed]) => {
     const current = queue[index];

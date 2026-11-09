@@ -18,6 +18,9 @@ routes nav
 shape Time
   seed: number
 
+shape BarStatus
+  active: bool
+
 shape Viewport
   width: number
   prefersReducedMotion: bool
@@ -86,6 +89,8 @@ component App
   resource results = searchTracks(query) as shape Track[] else empty()
   resource likedTracks = loadTracksByIds(liked) as shape Track[] else empty()
   resource recentTracks = loadTracksByIds(recent) as shape Track[] else empty()
+  // On an iPhone with iOS 26 the module shows a native tab bar accessory instead of MiniPlayer.
+  resource barStatus = syncPlayerBar(hasTrack, current.title, current.artist, current.cover, isPlaying) as shape BarStatus else empty()
   mutation reordered as shape Track[] then applyShuffle
 
   derive current = match queue.at(index) { case some(t) => t, case none => noTrack() }
@@ -97,7 +102,8 @@ component App
   derive showSpinner = buffering and slowLoad
   derive still = viewport.prefersReducedMotion
   // Room at the end of each scroller, so the floating player never hides the last row.
-  derive barClearance = hasTrack ? 84 : 0
+  derive nativeBar = barStatus.active
+  derive barClearance = hasTrack and not nativeBar ? 84 : 0
   derive upNext = queue.slice(index + 1)
   derive playlists = collections.filter(c => c.kind == "playlist")
   derive albums = collections.filter(c => c.kind == "album")
@@ -324,7 +330,7 @@ component App
                         list id="shelf-albums" virtualized=true display="flex" width="100%" height=206 overflow-x="scroll" overflow-y="hidden" box-sizing="border-box" scrollbar-width="none" estimated-item-width=160 padding-left=16 padding-right=4
                           for c in albums key=c.id
                             ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
-                  if hasTrack
+                  if hasTrack and not nativeBar
                     MiniPlayer(prefix="home", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "collection"
                 column navigationKey=`${e.id}` navigationScroll=`tracks-${e.id}` position="absolute" inset=0 background-color="surface.page"
@@ -338,7 +344,7 @@ component App
                           CollectionHero(title=titleOf(collections, e.params.id), subtitle=subtitleOf(collections, e.params.id), cover=coverOf(collections, e.params.id), canPlay=(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks).length > 0), play=playFrom(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks), 0), shuffleAll=shuffleAll(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks)))
                         else
                           TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks), i - 1), like=toggleLike(s.id), menu=aim(s))
-                  if hasTrack
+                  if hasTrack and not nativeBar
                     MiniPlayer(prefix="collection", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "search"
                 column navigationKey=`${e.id}` navigationScroll="search-scroll" position="absolute" inset=0
@@ -359,7 +365,7 @@ component App
                     list id="search-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 padding-bottom=barClearance testId="search-results"
                       for s, i in results key=s.id
                         TrackRow(track=s, rowId=`result-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(results, i), like=toggleLike(s.id), menu=aim(s))
-                  if hasTrack
+                  if hasTrack and not nativeBar
                     MiniPlayer(prefix="search", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "library"
                 column navigationKey=`${e.id}` navigationScroll="library-scroll" position="absolute" inset=0
@@ -385,7 +391,7 @@ component App
                           column flex=1 min-width=0 gap=2
                             text c.title font-weight=600
                             text `${c.trackCount} ${c.trackCount == 1 ? "song" : "songs"}` font="-exact-footnote" color="text.muted"
-                  if hasTrack
+                  if hasTrack and not nativeBar
                     MiniPlayer(prefix="library", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "player" and not hasTrack
                 column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="player-empty" position="absolute" inset=0 background-color="surface.page"
@@ -412,6 +418,12 @@ component App
                           column flex=1 min-width=0 gap=2
                             text s.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
                             text s.artist font="-exact-footnote" color="text.muted"
+      // Pressed by the native bar's buttons (modules/apple/PlayerBar.swift), so they run the same actions.
+      if nativeBar
+        row position="absolute" width=1 height=1 opacity=0 overflow="hidden" aria-hidden=true
+          button id="bar-open" hatch="barcontrol" press=openPlayer aria-label="Open player" width=1 height=1
+          button id="bar-toggle" hatch="barcontrol" press=toggle aria-label="Play or pause" width=1 height=1
+          button id="bar-next" hatch="barcontrol" press=next aria-label="Next song" width=1 height=1
       column id="track-menu" popover="auto" role="menu"
         button press=addToQueue(menuTrack) popovertarget="track-menu" popovertargetaction="hide" testId="menu-queue"
           image "symbol:add"

@@ -12,6 +12,7 @@
     "name": "ExactSpoti"
   },
   "audio_session": "playback",
+  "hatches": { "barcontrol": ["ios"] },
   "tamber": "app.tamber",
   "host": {
     "web": {},

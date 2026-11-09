@@ -46,6 +46,7 @@ Desktop shortcuts: `k` play/pause, `Shift+←` previous, `Shift+→` next.
 ## Notes from trying Exact
 
 - A native route draws above anything outside it, so the player bar lives inside each route.
+- On iOS 26 iPhones the player is a real `UITabAccessory`, set from `modules/apple/PlayerBar.swift` through Exact's tab hatch, so it merges into the tab bar on scroll. Other hosts and the test driver keep the drawn bar.
 - A horizontal `list` needs an explicit `overflow-x`, or dragging it scrolls the page.
 - A large title only collapses when the scroller comes right after the route's `header`.
 - Handler props take no arguments, so list loops bind theirs where the loop is written.
