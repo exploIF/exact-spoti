@@ -29,11 +29,11 @@ component MiniPlayer
             text clockText(position) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
             input type="range" min=0 max=(duration > 0 ? duration : 1) step=1 value=position aria-label="Seek" flex=1 min-width=0 input=scrubbing change=seek accent-color="brand.accent"
             text clockText(duration) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
-          button press=previous aria-label="Previous song" aria-keyshortcuts="Shift+ArrowLeft" testId="bar-previous"
+          button press=previous aria-label="Previous song" aria-keyshortcuts="Shift+ArrowLeft" testId="bar-previous" min-width=44 min-height=44
             image "symbol:icon.previous" color="text.primary"
-        button press=toggle aria-label=(isPlaying ? "Pause" : "Play") aria-keyshortcuts="k" testId="mini-toggle"
+        button press=toggle aria-label=(isPlaying ? "Pause" : "Play") aria-keyshortcuts="k" testId="mini-toggle" min-width=44 min-height=44
           image (isPlaying ? "symbol:pause-fill" : "symbol:play-fill") color="text.primary"
-        button press=next aria-label="Next song" aria-keyshortcuts="Shift+ArrowRight" testId="mini-next"
+        button press=next aria-label="Next song" aria-keyshortcuts="Shift+ArrowRight" testId="mini-next" min-width=44 min-height=44
           image "symbol:icon.next" color="text.primary"
       if not wide
         view height=2 background-color="surface.card"

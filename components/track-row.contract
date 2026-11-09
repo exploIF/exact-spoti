@@ -39,5 +39,5 @@ component TrackRow
       if isCurrent
         Equalizer(active=isPlaying, still=still)
       text clockText(track.duration) font="-exact-footnote" color="text.muted" font-variant-numeric="tabular-nums"
-      button press=like aria-label=(isLiked ? `Unlike ${track.title}` : `Like ${track.title}`) testId=`${rowId}-like`
+      button press=like aria-label=(isLiked ? `Unlike ${track.title}` : `Like ${track.title}`) testId=`${rowId}-like` min-width=44 min-height=44
         image (isLiked ? "symbol:heart-fill" : "symbol:heart") color=(isLiked ? "brand.accent" : "text.muted")
