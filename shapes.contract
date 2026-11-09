@@ -16,5 +16,6 @@ shape Collection
   cover: string
   trackCount: number
 
-// Seconds as m:ss.
-fn clockText(seconds: number): string = `${floor(seconds / 60)}:${floor(seconds) % 60 < 10 ? "0" : ""}${floor(seconds) % 60}`
+// Seconds as m:ss. Never below zero, whatever the player reports.
+fn wholeSeconds(seconds: number): number = max(0, floor(seconds))
+fn clockText(seconds: number): string = `${floor(wholeSeconds(seconds) / 60)}:${wholeSeconds(seconds) % 60 < 10 ? "0" : ""}${wholeSeconds(seconds) % 60}`

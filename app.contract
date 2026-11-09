@@ -54,6 +54,10 @@ component App
   state position = 0
   state duration = 0
   state buffering = false
+  // Between a song change and its source being ready: the element's reports still describe the old song.
+  state settling = false
+  // Set once loading has lasted long enough to be worth showing.
+  state slowLoad = false
   state failed = false
   state shuffles = 0
   state scrubTo = -1
@@ -80,7 +84,8 @@ component App
   derive isPlaying = hasTrack and not paused
   derive shownPosition = scrubTo >= 0 ? scrubTo : position
   derive shownDuration = duration > 0 ? duration : current.duration
-  derive fraction = shownDuration > 0 ? min(1, shownPosition / shownDuration) : 0
+  derive fraction = shownDuration > 0 ? max(0, min(1, shownPosition / shownDuration)) : 0
+  derive showSpinner = buffering and slowLoad
   derive still = viewport.prefersReducedMotion
   // Room at the end of each scroller, so the floating player never hides the last row.
   derive barClearance = hasTrack ? 84 : 0
@@ -88,6 +93,10 @@ component App
   derive playlists = collections.filter(c => c.kind == "playlist")
   derive albums = collections.filter(c => c.kind == "album")
   derive quickPicks = playlists.slice(0, 6)
+
+  // A quick load never shows a spinner; only one that outlasts this delay does.
+  task spinnerDelay when buffering
+    after(450, revealSpinner)
 
   action pick(name: string)
     nav = select(nav, name)
@@ -117,10 +126,14 @@ component App
     position = 0
     failed = false
     buffering = true
+    settling = true
     scrubTo = -1
     match track
       case some(t)
         duration = t.duration
+        // The catalog reuses its demo files. The same source would not reload by itself.
+        if t.url == current.url
+          load("audio")
         recent = [t.id].concat(recent.filter(id => id != t.id)).slice(0, maxRecents())
       case none
         duration = 0
@@ -159,25 +172,36 @@ component App
   action hostPlaying
     paused = false
     buffering = false
+    slowLoad = false
   action hostPaused
     paused = true
   action hostWaiting
     buffering = true
   action hostCanPlay
     buffering = false
+    slowLoad = false
+    settling = false
   action hostFailed(_message: string)
     failed = true
     buffering = false
+    slowLoad = false
+    settling = false
   // Whole seconds only: the text and slider never need more, and it keeps commits rare.
+  // iOS reports a slightly negative time while a new song prepares, so it is held at zero.
   action hostTime(seconds: number)
-    if floor(seconds) != position
-      position = floor(seconds)
+    let whole = max(0, floor(seconds))
+    if not settling and whole != position
+      position = whole
       buffering = false
-      buffering = false
+      slowLoad = false
   action hostDuration(seconds: number)
-    duration = seconds
+    if seconds > 0
+      duration = seconds
+  action revealSpinner
+    slowLoad = true
   action retry
     failed = false
+    settling = true
     load("audio")
 
   action scrubbing(seconds: number)
@@ -226,7 +250,7 @@ component App
     main testId="app" navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow width="100%" height="100%"
       display="flex" flex-direction="column" color-scheme="dark" background-color="surface.page" color="text.primary"
       if hasTrack
-        audio current.url id="audio" testId="audio" paused=paused loop=(repeat == "one") preload="auto"
+        audio current.url id="audio" testId="audio" paused=paused loop=(repeat == "one" or (repeat == "all" and queue.length == 1)) preload="auto"
           metadata=MediaMetadata(title=current.title, artist=current.artist, album=current.album, artwork=current.cover)
           nexttrack=next previoustrack=previous
           ended=next play=hostPlaying playing=hostPlaying pause=hostPaused waiting=hostWaiting canplay=hostCanPlay error=hostFailed
@@ -325,7 +349,7 @@ component App
                   scroll id="player-empty" flex=1 min-height=0
                     EmptyState(symbol="symbol:play", title="Nothing Playing", message="Pick a song to start listening.")
               if e.name == "player" and hasTrack
-                NowPlaying(entryKey=`${e.id}`, track=current, isPlaying=isPlaying, isBuffering=buffering, isLiked=liked.includes(current.id), shuffle=shuffle, repeat=repeat, position=shownPosition, duration=shownDuration, failed=failed, close=back, toggle=toggle, next=next, previous=previous, like=toggleLike(current.id), toggleShuffle=toggleShuffle, cycleRepeat=cycleRepeat, openQueue=openQueue, retry=retry, scrubbing=scrubbing, seek=seek)
+                NowPlaying(entryKey=`${e.id}`, track=current, isPlaying=isPlaying, isBuffering=showSpinner, isLiked=liked.includes(current.id), shuffle=shuffle, repeat=repeat, position=shownPosition, duration=shownDuration, failed=failed, close=back, toggle=toggle, next=next, previous=previous, like=toggleLike(current.id), toggleShuffle=toggleShuffle, cycleRepeat=cycleRepeat, openQueue=openQueue, retry=retry, scrubbing=scrubbing, seek=seek)
               if e.name == "queue"
                 column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="queue-list" position="absolute" inset=0 background-color="surface.page"
                   header appearance="none" display="flex" align-items="center" justify-content="space-between" padding="12px 16px"
