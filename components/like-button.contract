@@ -1,0 +1,16 @@
+// A heart with no hover box: under a pointer the heart itself grows a little.
+component LikeButton
+  props
+    isLiked: bool
+    label: string
+    buttonId: string
+    like: action
+  state hovered = false
+  action setHovered(isHovered: bool)
+    hovered = isHovered
+  view
+    button press=like hover=setHovered aria-label=label testId=buttonId min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
+      :hover
+        background-color = "transparent"
+      image (isLiked ? "symbol:heart-fill" : "symbol:heart") color=(isLiked ? "brand.accent" : "text.muted")
+        scale=(hovered ? 1.2 : 1) transition="scale 160ms cubic-bezier(.32,.72,0,1)"

@@ -31,11 +31,11 @@ component MiniPlayer
           text clockText(position) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
           input type="range" min=0 max=(duration > 0 ? duration : 1) step=1 value=position aria-label="Seek" flex=1 min-width=0 input=scrubbing change=seek accent-color="brand.accent"
           text clockText(duration) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
-        button press=previous aria-label="Previous song" aria-keyshortcuts="Shift+ArrowLeft" testId=`${prefix}-bar-previous` min-width=44 min-height=44
+        button press=previous aria-label="Previous song" aria-keyshortcuts="Shift+ArrowLeft" testId=`${prefix}-bar-previous` min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
           image "symbol:icon.previous" color="text.primary"
-      button press=toggle aria-label=(isPlaying ? "Pause" : "Play") aria-keyshortcuts="k" testId=`${prefix}-mini-toggle` min-width=44 min-height=44
+      button press=toggle aria-label=(isPlaying ? "Pause" : "Play") aria-keyshortcuts="k" testId=`${prefix}-mini-toggle` min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
         image (isPlaying ? "symbol:pause-fill" : "symbol:play-fill") color="text.primary"
-      button press=next aria-label="Next song" aria-keyshortcuts="Shift+ArrowRight" testId=`${prefix}-mini-next` min-width=44 min-height=44
+      button press=next aria-label="Next song" aria-keyshortcuts="Shift+ArrowRight" testId=`${prefix}-mini-next` min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
         image "symbol:icon.next" color="text.primary"
       if not wide
         view position="absolute" left=22 right=22 bottom=3 height=2 border-radius=1 overflow="hidden" background-color="surface.track"

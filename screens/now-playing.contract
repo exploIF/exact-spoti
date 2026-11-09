@@ -1,4 +1,5 @@
 use Track, clockText from "../shapes.contract"
+use LikeButton from "../components/like-button.contract"
 
 // The full player, shown as a sheet over whichever tab opened it.
 component NowPlaying
@@ -32,10 +33,10 @@ component NowPlaying
       // Past the edges, so no sharp strip of the cover shows under the home indicator.
       view backgroundMaterial="thick-dark" position="absolute" left=0 right=0 top=-120 bottom=-120
       header appearance="none" display="flex" align-items="center" justify-content="space-between" padding="12px 16px" position="relative"
-        button id="back" press=close aria-label="Close player" testId="player-close" min-width=44 min-height=44
+        button id="back" press=close aria-label="Close player" testId="player-close" min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
           image "symbol:icon.collapse" color="text.primary"
         text "Now Playing" role="heading" font-weight=600
-        button press=openQueue aria-label="Queue" testId="player-queue" min-width=44 min-height=44
+        button press=openQueue aria-label="Queue" testId="player-queue" min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
           image "symbol:list" color="text.primary"
       scroll id="player-scroll" flex=1 min-height=0 position="relative"
         column align-items="center" gap=22 padding="16px 24px 32px" max-width="30rem" margin="0 auto" box-sizing="border-box" width="100%" min-height="100%" justify-content="center"
@@ -45,8 +46,7 @@ component NowPlaying
             column flex=1 min-width=0 gap=4
               text track.title font="-exact-title2" font-weight=700 testId="player-title"
               text track.artist color="text.muted" testId="player-artist"
-            button press=like aria-label=(isLiked ? "Unlike" : "Like") testId="player-like" min-width=44 min-height=44
-              image (isLiked ? "symbol:heart-fill" : "symbol:heart") color=(isLiked ? "brand.accent" : "text.muted")
+            LikeButton(isLiked=isLiked, label=(isLiked ? "Unlike" : "Like"), buttonId="player-like", like=like)
           column width="100%" gap=4
             input type="range" min=0 max=(duration > 0 ? duration : 1) step=1 value=position aria-label="Seek" testId="player-seek" width="100%"
               input=scrubbing change=seek accent-color="brand.accent"
@@ -59,9 +59,9 @@ component NowPlaying
               button press=retry buttonStyle="bordered" testId="player-retry"
                 text "Try Again"
           row width="100%" align-items="center" justify-content="space-between"
-            button press=toggleShuffle aria-label=(shuffle ? "Turn shuffle off" : "Turn shuffle on") aria-pressed=shuffle testId="player-shuffle" min-width=44 min-height=44
+            button press=toggleShuffle aria-label=(shuffle ? "Turn shuffle off" : "Turn shuffle on") aria-pressed=shuffle testId="player-shuffle" min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
               image "symbol:icon.shuffle" color=(shuffle ? "brand.accent" : "text.muted")
-            button press=previous aria-label="Previous song" testId="player-previous" min-width=44 min-height=44
+            button press=previous aria-label="Previous song" testId="player-previous" min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
               image "symbol:icon.previous" font="-exact-title1" color="text.primary"
             button press=toggle aria-label=(isPlaying ? "Pause" : "Play") testId="player-toggle"
               width=68 height=68 border-radius=34 background-color="brand.accent" display="flex" align-items="center" justify-content="center"
@@ -69,7 +69,7 @@ component NowPlaying
                 progress aria-label="Loading"
               else
                 image (isPlaying ? "symbol:pause-fill" : "symbol:play-fill") font="-exact-title1" color="ink.on-brand"
-            button press=next aria-label="Next song" testId="player-next" min-width=44 min-height=44
+            button press=next aria-label="Next song" testId="player-next" min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
               image "symbol:icon.next" font="-exact-title1" color="text.primary"
-            button press=cycleRepeat aria-label=`Repeat: ${repeat}` testId="player-repeat" min-width=44 min-height=44
+            button press=cycleRepeat aria-label=`Repeat: ${repeat}` testId="player-repeat" min-width=44 min-height=44 display="flex" align-items="center" justify-content="center"
               image (repeat == "one" ? "symbol:icon.repeat-one" : "symbol:repeat") color=(repeat == "off" ? "text.muted" : "brand.accent")
