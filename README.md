@@ -47,6 +47,7 @@ Desktop shortcuts: `k` play/pause, `Shift+←` previous, `Shift+→` next.
 
 - A native route draws above anything outside it, so the player bar lives inside each route.
 - A horizontal `list` needs an explicit `overflow-x`, or dragging it scrolls the page.
+- A large title only collapses when the scroller comes right after the route's `header`.
 - Handler props take no arguments, so list loops bind theirs where the loop is written.
 - `Space` cannot be declared in `aria-keyshortcuts`, which is why play/pause is `k`.
 - Exact's `verify` found real bugs here: the shelf scrolling above and undersized tap targets.

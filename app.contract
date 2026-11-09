@@ -291,20 +291,20 @@ component App
                 column navigationKey=`${e.id}` navigationScroll="library-scroll" position="absolute" inset=0
                   header display="flex" flex-wrap="wrap" align-items="center" gap=8
                     text "Your Library" role="heading" aria-level=1 flex=1
-                  row role="radiogroup" aria-label="Library contents" flex-wrap="wrap" padding="0 16px 8px" gap=8
-                    button role="radio" aria-checked=(libraryFilter == "playlists") press=setLibraryFilter("playlists") testId="filter-playlists"
-                      text "Playlists"
-                    button role="radio" aria-checked=(libraryFilter == "liked") press=setLibraryFilter("liked") testId="filter-liked"
-                      text "Liked Songs"
-                  if libraryFilter == "liked"
-                    if likedTracks.length == 0
-                      EmptyState(symbol="symbol:heart", title="No Liked Songs", message="Tap the heart on a song to save it here.")
-                    else
-                      list id="library-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="liked-list"
+                  // Right after the header, so the large title collapses as this list scrolls.
+                  list id="library-scroll" flex=1 min-height=0 testId="library-list"
+                    row role="radiogroup" aria-label="Library contents" flex-wrap="wrap" padding="0 16px 8px" gap=8
+                      button role="radio" aria-checked=(libraryFilter == "playlists") press=setLibraryFilter("playlists") testId="filter-playlists"
+                        text "Playlists"
+                      button role="radio" aria-checked=(libraryFilter == "liked") press=setLibraryFilter("liked") testId="filter-liked"
+                        text "Liked Songs"
+                    if libraryFilter == "liked"
+                      if likedTracks.length == 0
+                        EmptyState(symbol="symbol:heart", title="No Liked Songs", message="Tap the heart on a song to save it here.")
+                      else
                         for s, i in likedTracks key=s.id
                           TrackRow(track=s, rowId=`liked-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=true, still=still, play=playFrom(likedTracks, i), like=toggleLike(s.id), menu=aim(s))
-                  else
-                    list id="library-scroll" virtualized=true estimated-item-height=68 flex=1 min-height=0 testId="playlist-list"
+                    else
                       for c in playlists key=c.id
                         link href=path("collection", c.id) testId=`library-${c.id}` display="flex" flex-direction="row" align-items="center" gap=12 padding="6px 16px" text-decoration="none" color="text.primary"
                           image c.cover width=52 height=52 border-radius=6 object-fit="cover" alt=""
