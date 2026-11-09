@@ -1,0 +1,71 @@
+use Track, clockText from "../shapes.contract"
+
+// The full player, shown as a sheet over whichever tab opened it.
+component NowPlaying
+  props
+    entryKey: string
+    track: Track
+    isPlaying: bool
+    isBuffering: bool
+    isLiked: bool
+    shuffle: bool
+    repeat: string
+    position: number
+    duration: number
+    failed: bool
+    close: action
+    toggle: action
+    next: action
+    previous: action
+    like: action
+    toggleShuffle: action
+    cycleRepeat: action
+    openQueue: action
+    retry: action
+    scrubbing: action
+    seek: action
+  view
+    column navigationKey=entryKey navigationPresentation="modal" navigationScroll="player-scroll" position="absolute" inset=0
+      background-color="surface.page" color="text.primary"
+      header display="flex" align-items="center" justify-content="space-between"
+        button id="back" press=close aria-label="Close player" testId="player-close"
+          image "symbol:close"
+        text "Now Playing" role="heading"
+        button press=openQueue aria-label="Queue" testId="player-queue"
+          image "symbol:list"
+      scroll id="player-scroll" flex=1 min-height=0
+        column align-items="center" gap=20 padding=24 max-width="30rem" margin="0 auto" box-sizing="border-box" width="100%"
+          image track.cover sharedElement="now-cover" width="100%" max-width="22rem" aspect-ratio=1 border-radius=12 object-fit="cover" alt=`Cover of ${track.album}`
+            transition="scale 280ms cubic-bezier(.32,.72,0,1)" scale=(isPlaying ? 1 : 0.92)
+          row width="100%" align-items="center" gap=12
+            column flex=1 min-width=0 gap=4
+              text track.title font="-exact-title2" font-weight=700 testId="player-title"
+              text track.artist color="text.muted" testId="player-artist"
+            button press=like aria-label=(isLiked ? "Unlike" : "Like") testId="player-like"
+              image (isLiked ? "symbol:heart-fill" : "symbol:heart") color=(isLiked ? "brand.accent" : "text.muted")
+          column width="100%" gap=4
+            input type="range" min=0 max=(duration > 0 ? duration : 1) step=1 value=position aria-label="Seek" testId="player-seek" width="100%"
+              input=scrubbing change=seek accent-color="brand.accent"
+            row justify-content="space-between"
+              text clockText(position) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums" testId="player-position"
+              text clockText(duration) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
+          if failed
+            column gap=8 align-items="center"
+              text "This song could not be loaded." color="-exact-system-red" testId="player-error"
+              button press=retry buttonStyle="bordered" testId="player-retry"
+                text "Try Again"
+          row width="100%" align-items="center" justify-content="space-between"
+            button press=toggleShuffle aria-label=(shuffle ? "Turn shuffle off" : "Turn shuffle on") aria-pressed=shuffle testId="player-shuffle"
+              image "symbol:icon.shuffle" color=(shuffle ? "brand.accent" : "text.muted")
+            button press=previous aria-label="Previous song" testId="player-previous"
+              image "symbol:icon.previous" font="-exact-title1" color="text.primary"
+            button press=toggle aria-label=(isPlaying ? "Pause" : "Play") testId="player-toggle"
+              width=68 height=68 border-radius=34 background-color="brand.accent" display="flex" align-items="center" justify-content="center"
+              if isBuffering
+                progress aria-label="Loading"
+              else
+                image (isPlaying ? "symbol:pause-fill" : "symbol:play-fill") font="-exact-title1" color="ink.on-brand"
+            button press=next aria-label="Next song" testId="player-next"
+              image "symbol:icon.next" font="-exact-title1" color="text.primary"
+            button press=cycleRepeat aria-label=`Repeat: ${repeat}` testId="player-repeat"
+              image (repeat == "one" ? "symbol:icon.repeat-one" : "symbol:repeat") color=(repeat == "off" ? "text.muted" : "brand.accent")

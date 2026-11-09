@@ -1,0 +1,16 @@
+tamber brand
+
+theme
+  surface.page = #100e16  scheme=fixed
+  surface.card = #1d1a26  scheme=fixed
+  surface.raised = #2b2736  scheme=fixed
+  text.primary = #f6f3fb  scheme=fixed
+  text.muted = #aaa4b8  scheme=fixed
+  brand.accent = #ff7a59  scheme=fixed
+  ink.on-brand = #1a1014  scheme=fixed
+
+icons
+  icon.next = icon(sf "forward.end.fill", svg "icons/next.svg")
+  icon.previous = icon(sf "backward.end.fill", svg "icons/previous.svg")
+  icon.shuffle = icon(sf "shuffle", svg "icons/shuffle.svg")
+  icon.repeat-one = icon(sf "repeat.1", svg "icons/repeat-one.svg")

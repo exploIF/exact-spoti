@@ -1,7 +1,61 @@
-test "the greeting loads"
-  expect tree has "root"
-  expect text "greeting" == "Hello from ExactSpoti."
+test "home shows quick picks and shelves"
+  clock data
+  expect tree has "quick-genre-0"
+  expect tree has "shelf-album-0"
+  expect tree missing "mini-player"
 
-test "the header's button likes it"
-  tap "like"
-  expect state liked == true
+test "playing a song shows the mini player, and next advances the queue"
+  clock data
+  tap "quick-genre-0"
+  clock settle
+  clock data
+  tap "home-t0"
+  clock settle
+  expect text "mini-title" == "Velvet Rivers"
+  expect state paused == false
+  expect state index == 0
+  tap "mini-next"
+  expect state index == 1
+  tap "mini-toggle"
+  expect state paused == true
+
+test "liked songs persist across a relaunch"
+  clock data
+  tap "quick-genre-0"
+  clock settle
+  clock data
+  tap "home-t0-like"
+  expect state liked.0 == "t0"
+  reload
+  clock data
+  tap "tab-library"
+  tap "filter-liked"
+  clock data
+  expect tree has "liked-t0"
+
+test "repeat cycles and shuffle keeps the current song"
+  clock data
+  tap "quick-genre-0"
+  clock settle
+  clock data
+  tap "home-t3"
+  clock settle
+  tap "mini-open"
+  clock settle
+  expect text "player-title" == "Golden Comets"
+  tap "player-repeat"
+  expect state repeat == "all"
+  tap "player-shuffle"
+  clock data
+  expect state index == 0
+  expect state current.id == "t3"
+
+test "search finds songs live"
+  clock data
+  tap "tab-search"
+  type "search-input" "velvet"
+  clock data
+  expect tree has "search-results"
+  type "search-input" "zzzz"
+  clock data
+  expect tree missing "search-results"

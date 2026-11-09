@@ -1,24 +1,342 @@
-// ExactSpoti: the view. app.ts answers what it asks for. Colours, fonts,
-// sizes and the safe area are left unsaid, so each platform supplies its own:
-// the header is the navigation bar, its heading the title, its button a bar item.
-shape Greeting
-  text: string
+// ExactSpoti: routes, the player engine and the layout. The single `audio`
+// element lives here, at the root, so playback survives every navigation.
+use Track, Collection from "./shapes.contract"
+use TrackRow from "./components/track-row.contract"
+use ShelfCard, QuickTile from "./components/collection-cards.contract"
+use MiniPlayer from "./components/mini-player.contract"
+use NowPlaying from "./screens/now-playing.contract"
+use EmptyState from "exact:content"
 
 routes nav
-  home "/"
+  tab home "/"
+    collection "/collection/:id"
+    player "/player"
+    queue "/queue"
+  tab search "/search"
+  tab library "/library"
 
-component ExactSpotiScaffold
-  resource greeting = greeting("ExactSpoti") as shape Greeting
-  state liked = false
-  action like
-    liked = not liked
+shape Time
+  seed: number
+
+shape Viewport
+  width: number
+  prefersReducedMotion: bool
+
+fn noTrack(): Track = Track(id="", title="", artist="", album="", cover="", url="", duration=0)
+// A queue holds a window around the song tapped, so a 5,000-song list stays cheap.
+fn historyWindow(): number = 50
+fn aheadWindow(): number = 200
+fn restartThresholdSeconds(): number = 3
+fn maxRecents(): number = 12
+
+fn collectionIn(nav: Router, tabName: string): string = match first(nav.tabs.filter(t => t.name == tabName)) {
+  case some(t) => match first(t.stack.filter(e => e.name == "collection")) {
+    case some(e) => e.params.id,
+    case none => ""
+  },
+  case none => ""
+}
+fn titleOf(items: Collection[], id: string): string = match first(items.filter(c => c.id == id)) { case some(c) => c.title, case none => "" }
+fn subtitleOf(items: Collection[], id: string): string = match first(items.filter(c => c.id == id)) { case some(c) => c.subtitle, case none => "" }
+fn coverOf(items: Collection[], id: string): string = match first(items.filter(c => c.id == id)) { case some(c) => c.cover, case none => "assets/covers/0.png" }
+
+component App
+  // Saved across launches.
+  state liked = [] persist
+  state recent = [] persist
+  state shuffle = false persist
+  state repeat = "off" persist
+  // The player.
+  state queue = []
+  state unshuffled = []
+  state index = 0
+  state paused = true
+  state position = 0
+  state duration = 0
+  state buffering = false
+  state failed = false
+  state shuffles = 0
+  state scrubTo = -1
+  // Browsing.
+  state query = ""
+  state libraryFilter = "playlists"
+  state menuTrack = noTrack()
+
+  resource time = exactTime() as shape Time
+  resource viewport = exactViewport() as shape Viewport
+  resource collections = loadCollections() as shape Collection[] else empty()
+  resource genres = loadGenres() as shape string[] else empty()
+  // One list per tab: a tab shows at most one collection at a time.
+  resource homeTracks = loadCollectionTracks(collectionIn(nav, "home")) as shape Track[] else empty()
+  resource searchTabTracks = loadCollectionTracks(collectionIn(nav, "search")) as shape Track[] else empty()
+  resource libraryTracks = loadCollectionTracks(collectionIn(nav, "library")) as shape Track[] else empty()
+  resource results = searchTracks(query) as shape Track[] else empty()
+  resource likedTracks = loadTracksByIds(liked) as shape Track[] else empty()
+  resource recentTracks = loadTracksByIds(recent) as shape Track[] else empty()
+  mutation reordered as shape Track[] then applyShuffle
+
+  derive current = match queue.at(index) { case some(t) => t, case none => noTrack() }
+  derive hasTrack = current.id != ""
+  derive isPlaying = hasTrack and not paused
+  derive shownPosition = scrubTo >= 0 ? scrubTo : position
+  derive shownDuration = duration > 0 ? duration : current.duration
+  derive fraction = shownDuration > 0 ? min(1, shownPosition / shownDuration) : 0
+  derive still = viewport.prefersReducedMotion
+  derive upNext = queue.slice(index + 1)
+  derive playlists = collections.filter(c => c.kind == "playlist")
+  derive albums = collections.filter(c => c.kind == "album")
+  derive quickPicks = playlists.slice(0, 6)
+
+  action pick(name: string)
+    nav = select(nav, name)
+  action follow(url: string)
+    nav = go(nav, url)
+  action back
+    nav = back(nav)
+  action openPlayer
+    nav = push(nav, "/player")
+  action openQueue
+    nav = push(nav, "/queue")
+
+  // Starts `list` at `i`, keeping a window of songs around it as the queue.
+  action playFrom(list: Track[], i: number)
+    let start = max(0, i - historyWindow())
+    let window = list.slice(start, i + aheadWindow())
+    queue = window
+    unshuffled = window
+    index = i - start
+    startCurrent(list.at(i))
+    if shuffle
+      let nextShuffle = shuffles + 1
+      shuffles = nextShuffle
+      send reordered = shuffleQueue(window, i - start, time.seed + nextShuffle)
+  action startCurrent(track: option<Track>)
+    paused = false
+    position = 0
+    failed = false
+    buffering = true
+    scrubTo = -1
+    match track
+      case some(t)
+        duration = t.duration
+        recent = [t.id].concat(recent.filter(id => id != t.id)).slice(0, maxRecents())
+      case none
+        duration = 0
+  action moveTo(i: number)
+    index = i
+    startCurrent(queue.at(i))
+  action next
+    if index + 1 < queue.length
+      moveTo(index + 1)
+    else if repeat == "all" and queue.length > 0
+      moveTo(0)
+    else
+      paused = true
+      position = 0
+      fastSeek("audio", 0)
+  action previous
+    if position > restartThresholdSeconds() or index == 0
+      position = 0
+      fastSeek("audio", 0)
+    else
+      moveTo(index - 1)
+  action playQueued(i: number)
+    moveTo(index + 1 + i)
+  action removeQueued(i: number)
+    let at = index + 1 + i
+    queue = queue.slice(0, at).concat(queue.slice(at + 1))
+  action addToQueue(track: Track)
+    if track.id != current.id
+      queue = queue.slice(0, index + 1).concat([track]).concat(queue.slice(index + 1).filter(t => t.id != track.id))
+  action toggle
+    paused = not paused
+    haptic("selection")
+
+  // Audio element events. Each mirrors the element, so lock-screen and media-key
+  // controls stay in agreement with the buttons here.
+  action hostPlaying
+    paused = false
+    buffering = false
+  action hostPaused
+    paused = true
+  action hostWaiting
+    buffering = true
+  action hostCanPlay
+    buffering = false
+  action hostFailed(_message: string)
+    failed = true
+    buffering = false
+  // Whole seconds only: the text and slider never need more, and it keeps commits rare.
+  action hostTime(seconds: number)
+    if floor(seconds) != position
+      position = floor(seconds)
+  action hostDuration(seconds: number)
+    duration = seconds
+  action retry
+    failed = false
+    load("audio")
+
+  action scrubbing(seconds: number)
+    scrubTo = seconds
+  action seek(seconds: number)
+    position = floor(seconds)
+    scrubTo = -1
+    fastSeek("audio", seconds)
+
+  action toggleShuffle
+    if shuffle
+      shuffle = false
+      let at = unshuffled.map(t => t.id).indexOf(current.id)
+      queue = unshuffled
+      index = max(0, at)
+    else
+      shuffle = true
+      let nextShuffle = shuffles + 1
+      shuffles = nextShuffle
+      send reordered = shuffleQueue(queue, index, time.seed + nextShuffle)
+    haptic("selection")
+  action applyShuffle
+    match reordered
+      case some(q)
+        queue = q
+        index = 0
+      case none
+        index = index
+  action cycleRepeat
+    repeat = (repeat == "off" ? "all" : repeat == "all" ? "one" : "off")
+    haptic("selection")
+
+  action toggleLike(id: string)
+    liked = liked.includes(id) ? liked.filter(x => x != id) : [id].concat(liked)
+    haptic("success")
+  action aim(track: Track)
+    menuTrack = track
+  action setQuery(v: string)
+    query = v
+  action browseGenre(genre: string)
+    query = genre
+  action setLibraryFilter(v: string)
+    libraryFilter = v
+
   view
-    main testId="root" navigationKey=`${top(nav).id}` navigationBack="back" width="100%" height="100%"
-      for e in stack(nav) key=e.id
-        column navigationKey=`${e.id}` navigationScroll="content" position="absolute" inset=0 display="flex" flex-direction="column"
-          header display="flex" align-items="center"
-            text "ExactSpoti" role="heading" aria-level=1 flex=1
-            button press=like aria-label=(liked ? "Unlike" : "Like") testId="like"
-              image (liked ? "symbol:heart-fill" : "symbol:heart")
-          scroll id="content" flex=1 min-height=0 padding=16
-            text greeting.text testId="greeting"
+    main testId="app" navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow width="100%" height="100%"
+      display="flex" flex-direction="column" color-scheme="dark" background-color="surface.page" color="text.primary"
+      if hasTrack
+        audio current.url id="audio" testId="audio" paused=paused loop=(repeat == "one") preload="auto"
+          metadata=MediaMetadata(title=current.title, artist=current.artist, album=current.album, artwork=current.cover)
+          nexttrack=next previoustrack=previous
+          ended=next play=hostPlaying playing=hostPlaying pause=hostPaused waiting=hostWaiting canplay=hostCanPlay error=hostFailed
+          timeupdate=hostTime durationchange=hostDuration
+      column flex=1 min-height=0 position="relative"
+        for t in nav.tabs key=t.name
+          column role="tabpanel" id=`panel-${t.name}` position="absolute" inset=0
+            for e in t.stack key=e.id
+              if e.name == "home"
+                column navigationKey=`${e.id}` navigationScroll="home-scroll" position="absolute" inset=0
+                  header display="flex" align-items="center"
+                    text "Good Listening" role="heading" aria-level=1 flex=1
+                  scroll id="home-scroll" flex=1 min-height=0
+                    column gap=24 padding="8px 0 24px"
+                      row flex-wrap="wrap" gap=8 padding="0 16px"
+                        for c in quickPicks key=c.id
+                          QuickTile(item=c, href=path("collection", c.id), tileId=`quick-${c.id}`)
+                      if recentTracks.length > 0
+                        column gap=4
+                          text "Recently Played" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px 4px"
+                          for s, i in recentTracks.slice(0, 5) key=s.id
+                            TrackRow(track=s, rowId=`recent-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(recentTracks, i), like=toggleLike(s.id), menu=aim(s))
+                      column gap=8
+                        text "Made For You" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px"
+                        list id="shelf-playlists" virtualized=true display="flex" flex-direction="row" height=206 estimated-item-width=160 padding-left=16 padding-right=4
+                          for c in playlists key=c.id
+                            ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
+                      column gap=8
+                        text "New Albums" role="heading" aria-level=2 font="-exact-title3" font-weight=700 padding="0 16px"
+                        list id="shelf-albums" virtualized=true display="flex" flex-direction="row" height=206 estimated-item-width=160 padding-left=16 padding-right=4
+                          for c in albums key=c.id
+                            ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
+              if e.name == "collection"
+                column navigationKey=`${e.id}` navigationScroll=`tracks-${e.id}` position="absolute" inset=0 background-color="surface.page"
+                  header display="flex" align-items="center"
+                    text titleOf(collections, e.params.id) role="heading" aria-level=2 flex=1
+                  list id=`tracks-${e.id}` virtualized=true estimated-item-height=60 flex=1 min-height=0 testId=`tracks-${t.name}`
+                    for s, i in (t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks) key=s.id
+                      TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom((t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks), i), like=toggleLike(s.id), menu=aim(s))
+              if e.name == "search"
+                column navigationKey=`${e.id}` navigationScroll="search-scroll" position="absolute" inset=0
+                  header display="flex" flex-wrap="wrap" align-items="center" gap=8
+                    text "Search" role="heading" aria-level=1 flex=1
+                    input type="search" value=query input=setQuery placeholder="Songs or artists" aria-label="Search songs and artists" testId="search-input" width="100%"
+                  if query.trim() == ""
+                    scroll id="search-scroll" flex=1 min-height=0
+                      row flex-wrap="wrap" gap=10 padding=16
+                        for g, i in genres key=g
+                          button press=browseGenre(g) testId=`genre-${i}` flex="1 1 150px" min-height=72 appearance="none" border-radius=8 background-color="surface.card" padding=14 display="flex" align-items="flex-start"
+                            text g font-weight=700 color="text.primary"
+                  else if results.length == 0 and not pending(results)
+                    EmptyState(symbol="symbol:search", title="No Results", message="Check the spelling or try another word.")
+                  else
+                    list id="search-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="search-results"
+                      for s, i in results key=s.id
+                        TrackRow(track=s, rowId=`result-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(results, i), like=toggleLike(s.id), menu=aim(s))
+              if e.name == "library"
+                column navigationKey=`${e.id}` navigationScroll="library-scroll" position="absolute" inset=0
+                  header display="flex" flex-wrap="wrap" align-items="center" gap=8
+                    text "Your Library" role="heading" aria-level=1 flex=1
+                  row role="radiogroup" aria-label="Library contents" padding="0 16px 8px" gap=8
+                    button role="radio" aria-checked=(libraryFilter == "playlists") press=setLibraryFilter("playlists") testId="filter-playlists"
+                      text "Playlists"
+                    button role="radio" aria-checked=(libraryFilter == "liked") press=setLibraryFilter("liked") testId="filter-liked"
+                      text "Liked Songs"
+                  if libraryFilter == "liked"
+                    if likedTracks.length == 0
+                      EmptyState(symbol="symbol:heart", title="No Liked Songs", message="Tap the heart on a song to save it here.")
+                    else
+                      list id="library-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="liked-list"
+                        for s, i in likedTracks key=s.id
+                          TrackRow(track=s, rowId=`liked-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=true, still=still, play=playFrom(likedTracks, i), like=toggleLike(s.id), menu=aim(s))
+                  else
+                    list id="library-scroll" virtualized=true estimated-item-height=68 flex=1 min-height=0 testId="playlist-list"
+                      for c in playlists key=c.id
+                        link href=path("collection", c.id) testId=`library-${c.id}` display="flex" flex-direction="row" align-items="center" gap=12 padding="6px 16px" text-decoration="none" color="text.primary"
+                          image c.cover width=52 height=52 border-radius=6 object-fit="cover" alt=""
+                          column flex=1 min-width=0 gap=2
+                            text c.title font-weight=600
+                            text `${c.trackCount} ${c.trackCount == 1 ? "song" : "songs"}` font="-exact-footnote" color="text.muted"
+              if e.name == "player"
+                NowPlaying(entryKey=`${e.id}`, track=current, isPlaying=isPlaying, isBuffering=buffering, isLiked=liked.includes(current.id), shuffle=shuffle, repeat=repeat, position=shownPosition, duration=shownDuration, failed=failed, close=back, toggle=toggle, next=next, previous=previous, like=toggleLike(current.id), toggleShuffle=toggleShuffle, cycleRepeat=cycleRepeat, openQueue=openQueue, retry=retry, scrubbing=scrubbing, seek=seek)
+              if e.name == "queue"
+                column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="queue-list" position="absolute" inset=0 background-color="surface.page"
+                  header display="flex" align-items="center" justify-content="space-between"
+                    button id="back" press=back aria-label="Close queue" testId="queue-close"
+                      image "symbol:close"
+                    text "Up Next" role="heading"
+                  if upNext.length == 0
+                    EmptyState(symbol="symbol:list", title="Queue Is Empty", message="Play a playlist to fill it.")
+                  else
+                    list id="queue-list" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="queue-list"
+                      for s, i in upNext key=s.id
+                        row press=playQueued(i) delete=removeQueued(i) testId=`queue-${i}` gap=12 align-items="center" padding="6px 16px"
+                          image s.cover width=44 height=44 border-radius=6 object-fit="cover" alt=""
+                          column flex=1 min-width=0 gap=2
+                            text s.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+                            text s.artist font="-exact-footnote" color="text.muted"
+      if hasTrack
+        MiniPlayer(track=current, isPlaying=isPlaying, fraction=fraction, open=openPlayer, toggle=toggle, next=next)
+      column id="track-menu" popover="auto" role="menu"
+        button press=addToQueue(menuTrack) popovertarget="track-menu" popovertargetaction="hide" testId="menu-queue"
+          image "symbol:add"
+          text "Add to Queue"
+        button press=toggleLike(menuTrack.id) popovertarget="track-menu" popovertargetaction="hide" testId="menu-like"
+          image "symbol:heart"
+          text (liked.includes(menuTrack.id) ? "Remove from Liked" : "Add to Liked")
+      row role="tablist" testId="tabs"
+        button role="tab" aria-controls="panel-home" aria-selected=(nav.tab == "home") press=pick("home") testId="tab-home" flex=1
+          image "symbol:home"
+          text "Home"
+        button role="tab" aria-controls="panel-search" aria-selected=(nav.tab == "search") press=pick("search") testId="tab-search" flex=1
+          image "symbol:search"
+          text "Search"
+        button role="tab" aria-controls="panel-library" aria-selected=(nav.tab == "library") press=pick("library") testId="tab-library" flex=1
+          image "symbol:book"
+          text "Library"

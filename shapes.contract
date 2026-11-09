@@ -1,0 +1,20 @@
+// The records shared by every screen. app.ts answers with exactly these fields.
+shape Track
+  id: string
+  title: string
+  artist: string
+  album: string
+  cover: string
+  url: string
+  duration: number
+
+shape Collection
+  id: string
+  kind: string
+  title: string
+  subtitle: string
+  cover: string
+  trackCount: number
+
+// Seconds as m:ss.
+fn clockText(seconds: number): string = `${floor(seconds / 60)}:${floor(seconds) % 60 < 10 ? "0" : ""}${floor(seconds) % 60}`

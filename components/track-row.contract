@@ -1,0 +1,43 @@
+use Track, clockText from "../shapes.contract"
+
+keyframes bounce
+  from translate="0px 10px"
+  to translate="0px 0px"
+
+// Three bars that dance on the row that is playing. Pure CSS: no app code runs per frame.
+component Equalizer
+  props
+    active: bool
+    still: bool
+  view
+    row gap=2 align-items="flex-end" height=14 width=14 overflow="hidden" aria-hidden=true
+      for i in [0, 1, 2] key=i
+        view width=3 height="100%" background-color="brand.accent"
+          animation=(active and not still ? `bounce ${520 + i * 130}ms ease-in-out ${i * 90}ms infinite alternate` : "none")
+          opacity=(active ? 1 : 0.5)
+
+// One song in a list. The row plays it; the heart beside it likes it.
+component TrackRow
+  props
+    track: Track
+    rowId: string
+    isCurrent: bool
+    isPlaying: bool
+    isLiked: bool
+    still: bool
+    play: action
+    like: action
+    menu: action
+  view
+    row press=play contextmenu=menu contextPopover="track-menu" testId=rowId gap=12 align-items="center"
+      padding="6px 16px" min-height=60 box-sizing="border-box" cursor="pointer"
+      image track.cover width=48 height=48 border-radius=6 flex-shrink=0 object-fit="cover" alt=""
+      column flex=1 min-width=0 gap=2
+        text track.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+          color=(isCurrent ? "brand.accent" : "text.primary")
+        text track.artist font="-exact-footnote" color="text.muted" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+      if isCurrent
+        Equalizer(active=isPlaying, still=still)
+      text clockText(track.duration) font="-exact-footnote" color="text.muted" font-variant-numeric="tabular-nums"
+      button press=like aria-label=(isLiked ? `Unlike ${track.title}` : `Like ${track.title}`) testId=`${rowId}-like`
+        image (isLiked ? "symbol:heart-fill" : "symbol:heart") color=(isLiked ? "brand.accent" : "text.muted")

@@ -1,0 +1,24 @@
+use Track from "../shapes.contract"
+
+// The strip above the tab bar: stays while the person browses, opens Now Playing.
+component MiniPlayer
+  props
+    track: Track
+    isPlaying: bool
+    fraction: number
+    open: action
+    toggle: action
+    next: action
+  view
+    column flex-shrink=0 background-color="surface.raised" testId="mini-player"
+      row press=open gap=10 align-items="center" padding="8px 12px" cursor="pointer" aria-label=`Now playing: ${track.title}` testId="mini-open"
+        image track.cover sharedElement="now-cover" width=42 height=42 border-radius=6 flex-shrink=0 object-fit="cover" alt=""
+        column flex=1 min-width=0 gap=1
+          text track.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId="mini-title"
+          text track.artist font="-exact-footnote" color="text.muted" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+        button press=toggle aria-label=(isPlaying ? "Pause" : "Play") testId="mini-toggle"
+          image (isPlaying ? "symbol:pause-fill" : "symbol:play-fill") color="text.primary"
+        button press=next aria-label="Next song" testId="mini-next"
+          image "symbol:icon.next" color="text.primary"
+      view height=2 background-color="surface.card"
+        view height="100%" width=`${fraction * 100}%` background-color="brand.accent"

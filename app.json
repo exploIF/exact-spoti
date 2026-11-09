@@ -5,16 +5,27 @@
   "id": "com.exploif.exactspoti",
   "start_url": "/",
   "display": "standalone",
+  "theme_color": "#100e16",
+  "background_color": "#100e16",
   "app": {
     "id": "com.exploif.exactspoti",
     "name": "ExactSpoti"
   },
+  "audio_session": "playback",
+  "tamber": "app.tamber",
   "host": {
-    "web": {}
+    "web": {},
+    "ios": {
+      "minimumOS": "17.0",
+      "deviceFamily": ["iphone", "ipad"],
+      "backgroundModes": ["audio"]
+    },
+    "macos": {
+      "minimumOS": "14.0",
+      "window": { "width": 1100, "height": 760, "minWidth": 380, "minHeight": 560 }
+    }
   },
   "deploy": {
-    "store": {
-      "web": "0"
-    }
+    "store": { "web": "0" }
   }
 }
