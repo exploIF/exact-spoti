@@ -35,7 +35,7 @@ component NowPlaying
           image "symbol:list"
       scroll id="player-scroll" flex=1 min-height=0
         column align-items="center" gap=20 padding=24 max-width="30rem" margin="0 auto" box-sizing="border-box" width="100%"
-          image track.cover sharedElement="now-cover" width="100%" max-width="22rem" aspect-ratio=1 border-radius=12 object-fit="cover" alt=`Cover of ${track.album}`
+          image track.cover width="100%" max-width="22rem" aspect-ratio=1 border-radius=12 object-fit="cover" alt=`Cover of ${track.album}`
             transition="scale 280ms cubic-bezier(.32,.72,0,1)" scale=(isPlaying ? 1 : 0.92)
           row width="100%" align-items="center" gap=12
             column flex=1 min-width=0 gap=4

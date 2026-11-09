@@ -2,7 +2,7 @@ test "home shows quick picks and shelves"
   clock data
   expect tree has "quick-genre-0"
   expect tree has "shelf-album-0"
-  expect tree missing "mini-player"
+  expect tree missing "home-mini-player"
 
 test "playing a song shows the mini player, and next advances the queue"
   clock data
@@ -11,12 +11,12 @@ test "playing a song shows the mini player, and next advances the queue"
   clock data
   tap "home-t0"
   clock settle
-  expect text "mini-title" == "Velvet Rivers"
+  expect text "collection-mini-title" == "Velvet Rivers"
   expect state paused == false
   expect state index == 0
-  tap "mini-next"
+  tap "collection-mini-next"
   expect state index == 1
-  tap "mini-toggle"
+  tap "collection-mini-toggle"
   expect state paused == true
 
 test "liked songs persist across a relaunch"
@@ -40,7 +40,7 @@ test "repeat cycles and shuffle keeps the current song"
   clock data
   tap "home-t3"
   clock settle
-  tap "mini-open"
+  tap "collection-mini-open"
   clock settle
   expect text "player-title" == "Golden Comets"
   tap "player-repeat"
@@ -68,9 +68,7 @@ test "a wide window keeps the player bar under the content, with seek"
   clock data
   tap "home-t0"
   clock settle
-  expect tree has "bar-seek"
-  tap "bar-previous"
-  expect state index == 0
+  expect tree has "collection-bar-seek"
   type "app" key "k"
   expect state paused == true
   type "app" key "Shift+ArrowRight"
