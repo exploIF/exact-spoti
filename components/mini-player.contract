@@ -8,7 +8,6 @@ component MiniPlayer
     track: Track
     isPlaying: bool
     wide: bool
-    liftAboveTabs: bool
     fraction: number
     position: number
     duration: number
@@ -19,9 +18,7 @@ component MiniPlayer
     scrubbing: action
     seek: action
   view
-    // iOS floats its tab bar over the content, so the bar is lifted clear of it there.
     column flex-shrink=0 background-color="surface.raised" testId=`${prefix}-mini-player`
-      margin-bottom=(liftAboveTabs ? 83 : 0)
       row gap=10 align-items="center" padding="8px 12px"
         row press=open flex=1 min-width=0 gap=10 align-items="center" cursor="pointer" aria-label=`Now playing: ${track.title}` testId=`${prefix}-mini-open`
           image track.cover width=42 height=42 border-radius=6 flex-shrink=0 object-fit="cover" alt=""

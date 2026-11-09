@@ -21,8 +21,6 @@ shape Time
 shape Viewport
   width: number
   prefersReducedMotion: bool
-  displayMode: string
-  pointer: string
 
 fn noTrack(): Track = Track(id="", title="", artist="", album="", cover="", url="", duration=0)
 // A queue holds a window around the song tapped, so a 5,000-song list stays cheap.
@@ -84,8 +82,6 @@ component App
   derive shownDuration = duration > 0 ? duration : current.duration
   derive fraction = shownDuration > 0 ? min(1, shownPosition / shownDuration) : 0
   derive still = viewport.prefersReducedMotion
-  // A native phone: the web reports its own display mode and keeps the tab bar in the page flow.
-  derive floatingTabBar = viewport.displayMode == "standalone" and viewport.pointer == "coarse" and viewport.width < 900
   derive upNext = queue.slice(index + 1)
   derive playlists = collections.filter(c => c.kind == "playlist")
   derive albums = collections.filter(c => c.kind == "album")
@@ -262,7 +258,7 @@ component App
                           for c in albums key=c.id
                             ShelfCard(item=c, href=path("collection", c.id), cardId=`shelf-${c.id}`)
                   if hasTrack
-                    MiniPlayer(prefix="home", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), liftAboveTabs=floatingTabBar, fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
+                    MiniPlayer(prefix="home", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "collection"
                 column navigationKey=`${e.id}` navigationScroll=`tracks-${e.id}` position="absolute" inset=0 background-color="surface.page"
                   header display="flex" align-items="center"
@@ -271,7 +267,7 @@ component App
                     for s, i in (t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks) key=s.id
                       TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom((t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks), i), like=toggleLike(s.id), menu=aim(s))
                   if hasTrack
-                    MiniPlayer(prefix="collection", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), liftAboveTabs=floatingTabBar, fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
+                    MiniPlayer(prefix="collection", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "search"
                 column navigationKey=`${e.id}` navigationScroll="search-scroll" position="absolute" inset=0
                   header display="flex" flex-wrap="wrap" align-items="center" gap=8
@@ -290,7 +286,7 @@ component App
                       for s, i in results key=s.id
                         TrackRow(track=s, rowId=`result-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(results, i), like=toggleLike(s.id), menu=aim(s))
                   if hasTrack
-                    MiniPlayer(prefix="search", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), liftAboveTabs=floatingTabBar, fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
+                    MiniPlayer(prefix="search", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "library"
                 column navigationKey=`${e.id}` navigationScroll="library-scroll" position="absolute" inset=0
                   header display="flex" flex-wrap="wrap" align-items="center" gap=8
@@ -316,7 +312,7 @@ component App
                             text c.title font-weight=600
                             text `${c.trackCount} ${c.trackCount == 1 ? "song" : "songs"}` font="-exact-footnote" color="text.muted"
                   if hasTrack
-                    MiniPlayer(prefix="library", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), liftAboveTabs=floatingTabBar, fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
+                    MiniPlayer(prefix="library", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "player" and not hasTrack
                 column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="player-empty" position="absolute" inset=0 background-color="surface.page"
                   header appearance="none" display="flex" align-items="center" padding="12px 16px"
