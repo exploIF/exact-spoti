@@ -7,7 +7,7 @@ component ShelfCard
     href: string
     cardId: string
   view
-    link href=href testId=cardId width=148 padding-right=12 box-sizing="content-box" flex-shrink=0 text-decoration="none" color="text.primary"
+    link href=href testId=cardId width=148 padding-right=12 border-radius=10 box-sizing="content-box" flex-shrink=0 text-decoration="none" color="text.primary"
       column gap=6
         image item.cover width=148 height=148 border-radius=8 object-fit="cover" alt=""
         text item.title font-size="min(-exact-subheadline, 18px)" font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"

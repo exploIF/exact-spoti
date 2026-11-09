@@ -31,7 +31,7 @@ component TrackRow
     menu: action
   view
     row press=play contextmenu=menu contextPopover="track-menu" testId=rowId gap=12 align-items="center"
-      padding="6px 16px" min-height=60 box-sizing="border-box" cursor="pointer"
+      padding="6px 16px" min-height=60 box-sizing="border-box" cursor="pointer" border-radius=8
       image track.cover width=48 height=48 border-radius=6 flex-shrink=0 object-fit="cover" alt=""
       column flex=1 min-width=0 gap=2
         text track.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"

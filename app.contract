@@ -386,7 +386,7 @@ component App
                           TrackRow(track=s, rowId=`liked-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=true, still=still, play=playFrom(likedTracks, i), like=toggleLike(s.id), menu=aim(s))
                     else
                       for c in playlists key=c.id
-                        link href=path("collection", c.id) testId=`library-${c.id}` display="flex" flex-direction="row" align-items="center" gap=12 padding="6px 16px" text-decoration="none" color="text.primary"
+                        link href=path("collection", c.id) testId=`library-${c.id}` display="flex" border-radius=8 flex-direction="row" align-items="center" gap=12 padding="6px 16px" text-decoration="none" color="text.primary"
                           image c.cover width=52 height=52 border-radius=6 object-fit="cover" alt=""
                           column flex=1 min-width=0 gap=2
                             text c.title font-weight=600
@@ -396,7 +396,7 @@ component App
               if e.name == "player" and not hasTrack
                 column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="player-empty" position="absolute" inset=0 background-color="surface.page"
                   header appearance="none" display="flex" align-items="center" padding="12px 16px"
-                    button id="back" press=back aria-label="Close player" testId="player-empty-close"
+                    button id="back" press=back aria-label="Close player" testId="player-empty-close" border-radius=22
                       image "symbol:close"
                   scroll id="player-empty" flex=1 min-height=0
                     EmptyState(symbol="symbol:play", title="Nothing Playing", message="Pick a song to start listening.")
@@ -405,7 +405,7 @@ component App
               if e.name == "queue"
                 column navigationKey=`${e.id}` navigationPresentation="modal" navigationScroll="queue-list" position="absolute" inset=0 background-color="surface.page"
                   header appearance="none" display="flex" align-items="center" justify-content="space-between" padding="12px 16px"
-                    button id="back" press=back aria-label="Close queue" testId="queue-close"
+                    button id="back" press=back aria-label="Close queue" testId="queue-close" border-radius=22
                       image "symbol:close"
                     text "Up Next" role="heading"
                   if upNext.length == 0
@@ -413,7 +413,7 @@ component App
                   else
                     list id="queue-list" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="queue-list"
                       for s, i in upNext key=s.id
-                        row press=playQueued(i) delete=removeQueued(i) testId=`queue-${i}` gap=12 align-items="center" padding="6px 16px"
+                        row press=playQueued(i) delete=removeQueued(i) testId=`queue-${i}` gap=12 align-items="center" padding="6px 16px" border-radius=8
                           image s.cover width=44 height=44 border-radius=6 object-fit="cover" alt=""
                           column flex=1 min-width=0 gap=2
                             text s.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
