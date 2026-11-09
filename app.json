@@ -1,0 +1,20 @@
+{
+  "$schema": "../exact/scripts/app.schema.json",
+  "name": "ExactSpoti",
+  "short_name": "ExactSpoti",
+  "id": "com.exploif.exactspoti",
+  "start_url": "/",
+  "display": "standalone",
+  "app": {
+    "id": "com.exploif.exactspoti",
+    "name": "ExactSpoti"
+  },
+  "host": {
+    "web": {}
+  },
+  "deploy": {
+    "store": {
+      "web": "0"
+    }
+  }
+}
