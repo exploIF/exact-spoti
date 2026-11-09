@@ -6,10 +6,17 @@ component ShelfCard
     item: Collection
     href: string
     cardId: string
+  state hovered = false
+  action setHovered(isHovered: bool)
+    hovered = isHovered
   view
-    link href=href testId=cardId width=148 padding-right=12 border-radius=10 box-sizing="content-box" flex-shrink=0 text-decoration="none" color="text.primary"
+    link href=href hover=setHovered testId=cardId width=148 padding-right=12 box-sizing="content-box" flex-shrink=0 text-decoration="none" color="text.primary"
+      :hover
+        background-color = "transparent"
       column gap=6
-        image item.cover width=148 height=148 border-radius=8 object-fit="cover" alt=""
+        view width=148 height=148 border-radius=8 overflow="hidden"
+          image item.cover width=148 height=148 object-fit="cover" alt=""
+            scale=(hovered ? 1.06 : 1) transition="scale 220ms cubic-bezier(.32,.72,0,1)"
         text item.title font-size="min(-exact-subheadline, 18px)" font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
         text item.subtitle font-size="min(-exact-caption1, 14px)" color="text.muted" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
 
