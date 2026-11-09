@@ -73,3 +73,20 @@ test "a wide window keeps the player bar under the content, with seek"
   expect state paused == true
   type "app" key "Shift+ArrowRight"
   expect state index == 1
+
+test "a collection's Play starts its first song and Shuffle turns shuffle on"
+  clock data
+  tap "quick-genre-0"
+  clock settle
+  clock data
+  expect tree has "collection-hero"
+  expect text "collection-title" == "Focus Mix"
+  tap "collection-play"
+  clock settle
+  expect state index == 0
+  expect state position == 0
+  expect text "collection-mini-title" == "Velvet Rivers"
+  tap "collection-shuffle"
+  clock data
+  expect state shuffle == true
+  expect state paused == false

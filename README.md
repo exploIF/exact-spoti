@@ -50,4 +50,5 @@ Desktop shortcuts: `k` play/pause, `Shift+←` previous, `Shift+→` next.
 - A large title only collapses when the scroller comes right after the route's `header`.
 - Handler props take no arguments, so list loops bind theirs where the loop is written.
 - `Space` cannot be declared in `aria-keyshortcuts`, which is why play/pause is `k`.
+- Exact's iOS host reads each new audio file's tracks on the main thread, so the first play of a song can freeze the UI until the file opens. Fast skipping loads only the song landed on.
 - Exact's `verify` found real bugs here: the shelf scrolling above and undersized tap targets.

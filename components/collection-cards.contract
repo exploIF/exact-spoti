@@ -23,4 +23,28 @@ component QuickTile
     link href=href testId=tileId flex="1 1 160px" min-width=0 display="flex" flex-direction="row" align-items="center" gap=10
       background-color="surface.card" border-radius=6 overflow="hidden" text-decoration="none" color="text.primary"
       image item.cover width=52 height=52 flex-shrink=0 object-fit="cover" alt=""
-      text item.title font-weight=600 flex=1 min-width=0 white-space="nowrap" overflow="hidden" text-overflow="ellipsis" padding-right=8
+      text item.title font-size="min(-exact-subheadline, 18px)" font-weight=600 flex=1 min-width=0 line-clamp=2 padding-right=8
+
+// The top of a collection: its cover, its name, and the two ways to start it.
+component CollectionHero
+  props
+    title: string
+    subtitle: string
+    cover: string
+    canPlay: bool
+    play: action
+    shuffleAll: action
+  view
+    column border-bottom="none" align-items="center" gap=6 padding="8px 16px 16px" testId="collection-hero"
+      image cover width=196 height=196 border-radius=10 object-fit="cover" alt=""
+      text title font="-exact-title2" font-weight=700 text-align="center" margin-top=10 testId="collection-title"
+      text subtitle font="-exact-subheadline" color="text.muted" text-align="center"
+      row gap=12 margin-top=10 flex-wrap="wrap" justify-content="center"
+        button press=play disabled=(not canPlay) aria-label="Play" testId="collection-play" min-width=128 max-width="100%" min-height=44 padding="0 16px" border-radius=22
+          background-color="brand.accent" display="flex" flex-direction="row" align-items="center" justify-content="center" gap=6
+          image "symbol:play-fill" color="ink.on-brand"
+          text "Play" font-weight=700 color="ink.on-brand"
+        button press=shuffleAll disabled=(not canPlay) aria-label="Shuffle" testId="collection-shuffle" min-width=128 max-width="100%" min-height=44 padding="0 16px" border-radius=22
+          background-color="surface.raised" display="flex" flex-direction="row" align-items="center" justify-content="center" gap=6
+          image "symbol:icon.shuffle" color="text.primary"
+          text "Shuffle" font-weight=700 color="text.primary"

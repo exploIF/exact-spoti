@@ -2,7 +2,7 @@
 // element lives here, at the root, so playback survives every navigation.
 use Track, Collection from "./shapes.contract"
 use TrackRow from "./components/track-row.contract"
-use ShelfCard, QuickTile from "./components/collection-cards.contract"
+use ShelfCard, QuickTile, CollectionHero from "./components/collection-cards.contract"
 use MiniPlayer from "./components/mini-player.contract"
 use NowPlaying from "./screens/now-playing.contract"
 use EmptyState from "exact:content"
@@ -22,12 +22,14 @@ shape Viewport
   width: number
   prefersReducedMotion: bool
 
+fn heroRow(): Track = Track(id="hero", title="", artist="", album="", cover="", url="", duration=0)
 fn noTrack(): Track = Track(id="", title="", artist="", album="", cover="", url="", duration=0)
 // A queue holds a window around the song tapped, so a 5,000-song list stays cheap.
 fn historyWindow(): number = 50
 fn aheadWindow(): number = 200
 fn restartThresholdSeconds(): number = 3
 fn maxRecents(): number = 12
+fn switchQuietMs(): number = 300
 
 fn collectionIn(nav: Router, tabName: string): string = match first(nav.tabs.filter(t => t.name == tabName)) {
   case some(t) => match first(t.stack.filter(e => e.name == "collection")) {
@@ -36,6 +38,8 @@ fn collectionIn(nav: Router, tabName: string): string = match first(nav.tabs.fil
   },
   case none => ""
 }
+fn tracksFor(tab: string, home: Track[], search: Track[], library: Track[]): Track[] = tab == "home" ? home : tab == "search" ? search : library
+fn genreCover(i: number): string = `assets/covers/${(i * 5 + 2) % 24}.png`
 fn titleOf(items: Collection[], id: string): string = match first(items.filter(c => c.id == id)) { case some(c) => c.title, case none => "" }
 fn subtitleOf(items: Collection[], id: string): string = match first(items.filter(c => c.id == id)) { case some(c) => c.subtitle, case none => "" }
 fn coverOf(items: Collection[], id: string): string = match first(items.filter(c => c.id == id)) { case some(c) => c.cover, case none => "assets/covers/0.png" }
@@ -56,6 +60,11 @@ component App
   state buffering = false
   // Between a song change and its source being ready: the element's reports still describe the old song.
   state settling = false
+  // The audio element's source. It trails `current` during a burst of taps: each source
+  // loaded blocks the iOS host's main thread, so only the song landed on should load.
+  state audioUrl = ""
+  state switchPending = false
+  state lastSwitchAt = -1000000
   // Set once loading has lasted long enough to be worth showing.
   state slowLoad = false
   state failed = false
@@ -98,6 +107,9 @@ component App
   task spinnerDelay when buffering
     after(450, revealSpinner)
 
+  task flushSource when switchPending
+    every(60, flushSwitch)
+
   action pick(name: string)
     nav = select(nav, name)
   action follow(url: string)
@@ -111,13 +123,20 @@ component App
 
   // Starts `list` at `i`, keeping a window of songs around it as the queue.
   action playFrom(list: Track[], i: number)
+    startList(list, i, shuffle)
+  // Turns shuffle on and starts the collection at a random song.
+  action shuffleAll(list: Track[])
+    shuffle = true
+    startList(list, floor(time.seed + shuffles) % max(1, list.length), true)
+    haptic("selection")
+  action startList(list: Track[], i: number, shuffled: bool)
     let start = max(0, i - historyWindow())
     let window = list.slice(start, i + aheadWindow())
     queue = window
     unshuffled = window
     index = i - start
     startCurrent(list.at(i))
-    if shuffle
+    if shuffled
       let nextShuffle = shuffles + 1
       shuffles = nextShuffle
       send reordered = shuffleQueue(window, i - start, time.seed + nextShuffle)
@@ -131,12 +150,29 @@ component App
     match track
       case some(t)
         duration = t.duration
-        // The catalog reuses its demo files. The same source would not reload by itself.
-        if t.url == current.url
-          load("audio")
+        requestSource(t.url)
         recent = [t.id].concat(recent.filter(id => id != t.id)).slice(0, maxRecents())
       case none
         duration = 0
+  // The first change in a while loads at once; a change right after another waits for the taps to stop.
+  action requestSource(url: string)
+    let now = performanceNow()
+    if now - lastSwitchAt > switchQuietMs()
+      switchPending = false
+      loadSource(url)
+    else
+      switchPending = true
+    lastSwitchAt = now
+  action flushSwitch
+    if performanceNow() - lastSwitchAt >= switchQuietMs()
+      switchPending = false
+      settling = true
+      loadSource(current.url)
+  action loadSource(url: string)
+    // The catalog reuses its demo files, and the same source would not reload by itself.
+    if url == audioUrl
+      load("audio")
+    audioUrl = url
   action moveTo(i: number)
     index = i
     startCurrent(queue.at(i))
@@ -173,24 +209,28 @@ component App
     paused = false
     buffering = false
     slowLoad = false
+  // A pause during a song change is the old source leaving, not a request to stop.
   action hostPaused
-    paused = true
+    if not settling and not switchPending
+      paused = true
   action hostWaiting
     buffering = true
   action hostCanPlay
-    buffering = false
-    slowLoad = false
-    settling = false
+    if not switchPending
+      buffering = false
+      slowLoad = false
+      settling = false
   action hostFailed(_message: string)
-    failed = true
-    buffering = false
-    slowLoad = false
-    settling = false
+    if not switchPending
+      failed = true
+      buffering = false
+      slowLoad = false
+      settling = false
   // Whole seconds only: the text and slider never need more, and it keeps commits rare.
   // iOS reports a slightly negative time while a new song prepares, so it is held at zero.
   action hostTime(seconds: number)
     let whole = max(0, floor(seconds))
-    if not settling and whole != position
+    if not settling and not switchPending and whole != position
       position = whole
       buffering = false
       slowLoad = false
@@ -250,7 +290,7 @@ component App
     main testId="app" navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow width="100%" height="100%"
       display="flex" flex-direction="column" color-scheme="dark" background-color="surface.page" color="text.primary"
       if hasTrack
-        audio current.url id="audio" testId="audio" paused=paused loop=(repeat == "one" or (repeat == "all" and queue.length == 1)) preload="auto"
+        audio audioUrl id="audio" testId="audio" paused=paused loop=(repeat == "one" or (repeat == "all" and queue.length == 1)) preload="auto"
           metadata=MediaMetadata(title=current.title, artist=current.artist, album=current.album, artwork=current.cover)
           nexttrack=next previoustrack=previous
           ended=next play=hostPlaying playing=hostPlaying pause=hostPaused waiting=hostWaiting canplay=hostCanPlay error=hostFailed
@@ -290,8 +330,13 @@ component App
                   header display="flex" align-items="center"
                     text titleOf(collections, e.params.id) role="heading" aria-level=2 flex=1
                   list id=`tracks-${e.id}` virtualized=true estimated-item-height=60 flex=1 min-height=0 padding-bottom=barClearance testId=`tracks-${t.name}`
-                    for s, i in (t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks) key=s.id
-                      TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom((t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks), i), like=toggleLike(s.id), menu=aim(s))
+                    // A virtualized list repeats one template, so the hero is a row at the head of the data.
+                    for s, i in [heroRow()].concat(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks)) key=s.id
+                      column padding=0 border-top="none" border-bottom=(s.id == heroRow().id ? "none" : "0.5px solid -exact-separator")
+                        if s.id == heroRow().id
+                          CollectionHero(title=titleOf(collections, e.params.id), subtitle=subtitleOf(collections, e.params.id), cover=coverOf(collections, e.params.id), canPlay=(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks).length > 0), play=playFrom(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks), 0), shuffleAll=shuffleAll(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks)))
+                        else
+                          TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(tracksFor(t.name, homeTracks, searchTabTracks, libraryTracks), i - 1), like=toggleLike(s.id), menu=aim(s))
                   if hasTrack
                     MiniPlayer(prefix="collection", track=current, isPlaying=isPlaying, wide=(viewport.width >= 900), fraction=fraction, position=shownPosition, duration=shownDuration, open=openPlayer, toggle=toggle, next=next, previous=previous, scrubbing=scrubbing, seek=seek)
               if e.name == "search"
@@ -303,8 +348,10 @@ component App
                     scroll id="search-scroll" flex=1 min-height=0
                       row flex-wrap="wrap" gap=10 padding=16 padding-bottom=(16 + barClearance)
                         for g, i in genres key=g
-                          button press=browseGenre(g) testId=`genre-${i}` flex="1 1 150px" min-height=72 appearance="none" border-radius=8 background-color="surface.card" padding=14 display="flex" align-items="flex-start"
-                            text g font-weight=700 color="text.primary"
+                          button press=browseGenre(g) testId=`genre-${i}` flex="1 1 150px" height=92 appearance="none" border-radius=10 overflow="hidden" position="relative" background-color="surface.card" padding=14 display="flex" align-items="flex-start"
+                            image genreCover(i) position="absolute" inset=0 width="100%" height="100%" object-fit="cover" alt=""
+                            view position="absolute" inset=0 background-image="linear-gradient(120deg, rgba(0,0,0,0.62), rgba(0,0,0,0.08))"
+                            text g font-weight=700 color="text.primary" position="relative"
                   else if results.length == 0 and not pending(results)
                     EmptyState(symbol="symbol:search", title="No Results", message="Check the spelling or try another word.")
                   else

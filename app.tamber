@@ -8,9 +8,12 @@ theme
   text.muted = #aaa4b8  scheme=fixed
   brand.accent = #ff7a59  scheme=fixed
   ink.on-brand = #1a1014  scheme=fixed
-  surface.glass-tint = rgba(18, 16, 24, 0.76)  scheme=fixed
+  surface.glass-tint = rgba(22, 20, 30, 0.92)  scheme=fixed
+  surface.track = rgba(246, 243, 251, 0.2)  scheme=fixed
+  AccentColor = #ff7a59  scheme=fixed
 
 icons
+  icon.collapse = icon(sf "chevron.down", svg "icons/chevron-down.svg")
   icon.next = icon(sf "forward.end.fill", svg "icons/next.svg")
   icon.previous = icon(sf "backward.end.fill", svg "icons/previous.svg")
   icon.shuffle = icon(sf "shuffle", svg "icons/shuffle.svg")
