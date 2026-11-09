@@ -8,6 +8,7 @@ theme
   text.muted = #aaa4b8  scheme=fixed
   brand.accent = #ff7a59  scheme=fixed
   ink.on-brand = #1a1014  scheme=fixed
+  surface.glass-tint = rgba(18, 16, 24, 0.76)  scheme=fixed
 
 icons
   icon.next = icon(sf "forward.end.fill", svg "icons/next.svg")

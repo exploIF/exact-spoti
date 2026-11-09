@@ -82,6 +82,8 @@ component App
   derive shownDuration = duration > 0 ? duration : current.duration
   derive fraction = shownDuration > 0 ? min(1, shownPosition / shownDuration) : 0
   derive still = viewport.prefersReducedMotion
+  // Room at the end of each scroller, so the floating player never hides the last row.
+  derive barClearance = hasTrack ? 84 : 0
   derive upNext = queue.slice(index + 1)
   derive playlists = collections.filter(c => c.kind == "playlist")
   derive albums = collections.filter(c => c.kind == "album")
@@ -238,7 +240,7 @@ component App
                   header display="flex" align-items="center"
                     text "Good Listening" role="heading" aria-level=1 flex=1
                   scroll id="home-scroll" flex=1 min-height=0
-                    column gap=24 padding="8px 0 24px"
+                    column gap=24 padding="8px 0 0" padding-bottom=(24 + barClearance)
                       row flex-wrap="wrap" gap=8 padding="0 16px"
                         for c in quickPicks key=c.id
                           QuickTile(item=c, href=path("collection", c.id), tileId=`quick-${c.id}`)
@@ -263,7 +265,7 @@ component App
                 column navigationKey=`${e.id}` navigationScroll=`tracks-${e.id}` position="absolute" inset=0 background-color="surface.page"
                   header display="flex" align-items="center"
                     text titleOf(collections, e.params.id) role="heading" aria-level=2 flex=1
-                  list id=`tracks-${e.id}` virtualized=true estimated-item-height=60 flex=1 min-height=0 testId=`tracks-${t.name}`
+                  list id=`tracks-${e.id}` virtualized=true estimated-item-height=60 flex=1 min-height=0 padding-bottom=barClearance testId=`tracks-${t.name}`
                     for s, i in (t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks) key=s.id
                       TrackRow(track=s, rowId=`${t.name}-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom((t.name == "home" ? homeTracks : t.name == "search" ? searchTabTracks : libraryTracks), i), like=toggleLike(s.id), menu=aim(s))
                   if hasTrack
@@ -275,14 +277,14 @@ component App
                     input type="search" value=query input=setQuery placeholder="Songs or artists" aria-label="Search songs and artists" testId="search-input" width="100%"
                   if query.trim() == ""
                     scroll id="search-scroll" flex=1 min-height=0
-                      row flex-wrap="wrap" gap=10 padding=16
+                      row flex-wrap="wrap" gap=10 padding=16 padding-bottom=(16 + barClearance)
                         for g, i in genres key=g
                           button press=browseGenre(g) testId=`genre-${i}` flex="1 1 150px" min-height=72 appearance="none" border-radius=8 background-color="surface.card" padding=14 display="flex" align-items="flex-start"
                             text g font-weight=700 color="text.primary"
                   else if results.length == 0 and not pending(results)
                     EmptyState(symbol="symbol:search", title="No Results", message="Check the spelling or try another word.")
                   else
-                    list id="search-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 testId="search-results"
+                    list id="search-scroll" virtualized=true estimated-item-height=60 flex=1 min-height=0 padding-bottom=barClearance testId="search-results"
                       for s, i in results key=s.id
                         TrackRow(track=s, rowId=`result-${s.id}`, isCurrent=(s.id == current.id), isPlaying=isPlaying, isLiked=liked.includes(s.id), still=still, play=playFrom(results, i), like=toggleLike(s.id), menu=aim(s))
                   if hasTrack
@@ -292,7 +294,7 @@ component App
                   header display="flex" flex-wrap="wrap" align-items="center" gap=8
                     text "Your Library" role="heading" aria-level=1 flex=1
                   // Right after the header, so the large title collapses as this list scrolls.
-                  list id="library-scroll" flex=1 min-height=0 testId="library-list"
+                  list id="library-scroll" flex=1 min-height=0 padding-bottom=barClearance testId="library-list"
                     row role="radiogroup" aria-label="Library contents" flex-wrap="wrap" padding="0 16px 8px" gap=8
                       button role="radio" aria-checked=(libraryFilter == "playlists") press=setLibraryFilter("playlists") testId="filter-playlists"
                         text "Playlists"

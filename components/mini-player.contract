@@ -1,7 +1,7 @@
 use Track, clockText from "../shapes.contract"
 
-// The player bar under the content. On a phone it is a compact strip that opens
-// Now Playing; on a wide window it also carries the transport and the seek bar.
+// A floating glass capsule above the tab bar, with the screen's content scrolling
+// beneath it. On a phone it opens Now Playing; a wide window adds transport and seek.
 component MiniPlayer
   props
     prefix: string
@@ -18,24 +18,25 @@ component MiniPlayer
     scrubbing: action
     seek: action
   view
-    column flex-shrink=0 background-color="surface.raised" testId=`${prefix}-mini-player`
-      row gap=10 align-items="center" padding="8px 12px"
-        row press=open flex=1 min-width=0 gap=10 align-items="center" cursor="pointer" aria-label=`Now playing: ${track.title}` testId=`${prefix}-mini-open` min-height=44
-          image track.cover width=42 height=42 border-radius=6 flex-shrink=0 object-fit="cover" alt=""
-          column flex=1 min-width=0 gap=1
-            text track.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=`${prefix}-mini-title`
-            text track.artist font="-exact-footnote" color="text.muted" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
-        if wide
-          row flex=2 min-width=0 gap=10 align-items="center" testId=`${prefix}-bar-seek`
-            text clockText(position) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
-            input type="range" min=0 max=(duration > 0 ? duration : 1) step=1 value=position aria-label="Seek" flex=1 min-width=0 input=scrubbing change=seek accent-color="brand.accent"
-            text clockText(duration) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
-          button press=previous aria-label="Previous song" aria-keyshortcuts="Shift+ArrowLeft" testId=`${prefix}-bar-previous` min-width=44 min-height=44
-            image "symbol:icon.previous" color="text.primary"
-        button press=toggle aria-label=(isPlaying ? "Pause" : "Play") aria-keyshortcuts="k" testId=`${prefix}-mini-toggle` min-width=44 min-height=44
-          image (isPlaying ? "symbol:pause-fill" : "symbol:play-fill") color="text.primary"
-        button press=next aria-label="Next song" aria-keyshortcuts="Shift+ArrowRight" testId=`${prefix}-mini-next` min-width=44 min-height=44
-          image "symbol:icon.next" color="text.primary"
+    row backgroundMaterial="glass" background-color="surface.glass-tint" position="absolute" left=12 right=12 bottom=8 border-radius=30
+      gap=4 align-items="center" padding="8px 8px 8px 10px" testId=`${prefix}-mini-player`
+      row press=open flex=1 min-width=0 min-height=44 gap=10 align-items="center" cursor="pointer"
+        aria-label=`Now playing: ${track.title}` testId=`${prefix}-mini-open`
+        image track.cover width=44 height=44 border-radius=22 flex-shrink=0 object-fit="cover" alt=""
+        column flex=1 min-width=0 gap=1
+          text track.title font-weight=600 white-space="nowrap" overflow="hidden" text-overflow="ellipsis" testId=`${prefix}-mini-title`
+          text track.artist font="-exact-footnote" color="text.muted" white-space="nowrap" overflow="hidden" text-overflow="ellipsis"
+      if wide
+        row flex=2 min-width=0 gap=10 align-items="center" padding="0 12px" testId=`${prefix}-bar-seek`
+          text clockText(position) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
+          input type="range" min=0 max=(duration > 0 ? duration : 1) step=1 value=position aria-label="Seek" flex=1 min-width=0 input=scrubbing change=seek accent-color="brand.accent"
+          text clockText(duration) font="-exact-caption1" color="text.muted" font-variant-numeric="tabular-nums"
+        button press=previous aria-label="Previous song" aria-keyshortcuts="Shift+ArrowLeft" testId=`${prefix}-bar-previous` min-width=44 min-height=44
+          image "symbol:icon.previous" color="text.primary"
+      button press=toggle aria-label=(isPlaying ? "Pause" : "Play") aria-keyshortcuts="k" testId=`${prefix}-mini-toggle` min-width=44 min-height=44
+        image (isPlaying ? "symbol:pause-fill" : "symbol:play-fill") color="text.primary"
+      button press=next aria-label="Next song" aria-keyshortcuts="Shift+ArrowRight" testId=`${prefix}-mini-next` min-width=44 min-height=44
+        image "symbol:icon.next" color="text.primary"
       if not wide
-        view height=2 background-color="surface.card"
+        view position="absolute" left=66 right=112 bottom=5 height=2 border-radius=1 overflow="hidden" background-color="surface.raised"
           view height="100%" width=`${fraction * 100}%` background-color="brand.accent"
