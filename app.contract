@@ -2,7 +2,7 @@
 // element lives here, at the root, so playback survives every navigation.
 use Track, Collection from "./shapes.contract"
 use TrackRow from "./components/track-row.contract"
-use ShelfCard, QuickTile, CollectionHero from "./components/collection-cards.contract"
+use ShelfCard, QuickTile, CollectionHero, FilterPill from "./components/collection-cards.contract"
 use MiniPlayer from "./components/mini-player.contract"
 use NowPlaying from "./screens/now-playing.contract"
 use EmptyState from "exact:content"
@@ -285,6 +285,7 @@ component App
     query = genre
   action setLibraryFilter(v: string)
     libraryFilter = v
+    haptic("selection")
 
   view
     main testId="app" navigationKey=`${top(nav).id}` navigationBack="back" navigate=follow width="100%" height="100%"
@@ -366,11 +367,9 @@ component App
                     text "Your Library" role="heading" aria-level=1 flex=1
                   // Right after the header, so the large title collapses as this list scrolls.
                   list id="library-scroll" flex=1 min-height=0 padding-bottom=barClearance testId="library-list"
-                    row role="radiogroup" aria-label="Library contents" flex-wrap="wrap" padding="0 16px 8px" gap=8
-                      button role="radio" aria-checked=(libraryFilter == "playlists") press=setLibraryFilter("playlists") testId="filter-playlists"
-                        text "Playlists"
-                      button role="radio" aria-checked=(libraryFilter == "liked") press=setLibraryFilter("liked") testId="filter-liked"
-                        text "Liked Songs"
+                    row role="radiogroup" aria-label="Library contents" flex-wrap="wrap" padding="4px 16px 12px" gap=8 border-top="none" border-bottom="none"
+                      FilterPill(label="Playlists", selected=(libraryFilter == "playlists"), pick=setLibraryFilter("playlists"), pillId="filter-playlists")
+                      FilterPill(label="Liked Songs", selected=(libraryFilter == "liked"), pick=setLibraryFilter("liked"), pillId="filter-liked")
                     if libraryFilter == "liked"
                       if likedTracks.length == 0
                         // A border written on a row replaces the separator the platform draws under it.

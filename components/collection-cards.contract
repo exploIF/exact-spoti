@@ -48,3 +48,15 @@ component CollectionHero
           background-color="surface.raised" display="flex" flex-direction="row" align-items="center" justify-content="center" gap=6
           image "symbol:icon.shuffle" color="text.primary"
           text "Shuffle" font-weight=700 color="text.primary"
+
+// One choice in a row of filters: filled when chosen.
+component FilterPill
+  props
+    label: string
+    selected: bool
+    pick: action
+    pillId: string
+  view
+    button role="radio" aria-checked=selected press=pick testId=pillId min-height=44 padding="0 18px" border-radius=22
+      background-color=(selected ? "brand.accent" : "surface.raised") display="flex" align-items="center" justify-content="center"
+      text label font-weight=600 color=(selected ? "ink.on-brand" : "text.primary")
